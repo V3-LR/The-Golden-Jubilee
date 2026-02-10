@@ -1,4 +1,3 @@
-
 export type PropertyType = 'Villa-Pool' | 'Villa-Hall' | 'Resort' | 'TreeHouse';
 export type UserRole = 'planner' | 'guest' | null;
 export type FamilySide = 'Ladkiwale' | 'Ladkewale' | 'Common';
@@ -12,6 +11,12 @@ export interface EventFunction {
   dressCode: string;
   description: string;
   image: string;
+}
+
+export interface FamilyMember {
+  name: string;
+  age: number;
+  relation: string;
 }
 
 export interface Guest {
@@ -32,6 +37,7 @@ export interface Guest {
   };
   // RSVP Fields
   paxCount?: number;
+  familyMembers?: FamilyMember[];
   allergies?: string;
   drinksPreference?: 'Alcohol' | 'Non-Alcohol' | 'Both';
   arrivalDateTime?: string;

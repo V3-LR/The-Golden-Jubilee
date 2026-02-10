@@ -141,7 +141,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     const currentGuest = guests.find(g => g.id === persistedGuestId) || guests[0]; 
 
-    if (activeTab === 'portal') return <GuestPortal guest={currentGuest} />;
+    if (activeTab === 'portal') return <GuestPortal guest={currentGuest} onUpdate={handleUpdateGuest} />;
     
     if (activeTab === 'master') {
       return (
@@ -202,7 +202,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FEF9E7] flex">
+    <div className="min-h-screen bg-[#FCFAF2] flex">
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }} 
@@ -213,7 +213,7 @@ const App: React.FC = () => {
       />
       
       <main className="flex-grow min-h-screen lg:ml-64 w-full">
-        <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FEF9E7]/95 backdrop-blur-xl z-[40] border-b border-[#D4AF37]/10">
+        <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[40] border-b border-[#D4AF37]/10">
           <div className="flex items-center gap-4">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={20} /></button>
             <div className="flex flex-col">

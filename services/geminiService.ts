@@ -1,29 +1,23 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
+// Always initialize the Gemini client using the environment variable directly.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
 export class GeminiService {
-  private ai: GoogleGenAI | null = null;
-
-  constructor() {
-    const apiKey = process.env.API_KEY;
-    if (apiKey) {
-      this.ai = new GoogleGenAI({ apiKey });
-    } else {
-      console.warn("Gemini API Key is missing. AI features will be disabled.");
-    }
-  }
-
+  /**
+   * Suggests logistical planning based on guest list data.
+   */
   async suggestLogistics(guestData: string) {
-    if (!this.ai) return "AI Assistant is not configured. Please add your API_KEY to Vercel settings.";
-    
     try {
-      const response = await this.ai.models.generateContent({
+      const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `You are an expert wedding and anniversary planner. Based on the following guest list, suggest a logistical plan including pick-up batches, seating arrangements, and dietary special attention needed. Guest Data: ${guestData}`,
         config: {
           thinkingConfig: { thinkingBudget: 0 }
         }
       });
+      // The extracted generated text is available directly via the .text property.
       return response.text;
     } catch (error) {
       console.error("Gemini Error:", error);
@@ -31,12 +25,13 @@ export class GeminiService {
     }
   }
 
+  /**
+   * Generates customized menu ideas based on dietary requirements.
+   */
   async generateMealIdeas(dietaryNotes: string[]) {
-    if (!this.ai) return null;
-
     try {
       const uniqueNotes = [...new Set(dietaryNotes)];
-      const response = await this.ai.models.generateContent({
+      const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Create a customized 3-course menu idea for an anniversary gala that accommodates these dietary requirements: ${uniqueNotes.join(', ')}. Format as JSON with "title", "description", and "courses" (array of {name, description}).`,
         config: {
@@ -62,6 +57,7 @@ export class GeminiService {
           }
         }
       });
+      // Extract the JSON string from response.text and parse it.
       return JSON.parse(response.text || '{}');
     } catch (error) {
       console.error("Gemini Meal Error:", error);

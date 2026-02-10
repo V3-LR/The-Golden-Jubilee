@@ -95,20 +95,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
         
         <div className="p-6 space-y-3 mt-auto border-t border-[#D4AF37]/10">
           {role === 'planner' && (
-            <button 
-              onClick={() => {
-                const text = `${EVENT_CONFIG.title} Access:\nFull Planner: ${EVENT_CONFIG.fullAccessCode}\nGuest Preview: ${EVENT_CONFIG.guestAccessCode}`;
-                navigator.clipboard.writeText(text);
-                alert("Access codes copied to clipboard!");
-              }}
-              className="w-full flex items-center justify-between p-4 bg-[#D4AF37]/5 text-[#D4AF37] rounded-2xl border border-[#D4AF37]/20 hover:bg-[#D4AF37]/10 transition-all group"
-            >
+            <div className="p-4 bg-[#D4AF37]/5 text-[#D4AF37] rounded-2xl border border-[#D4AF37]/20 flex items-center justify-between group">
               <div className="text-left">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60">Distribution</p>
-                <p className="text-xs font-bold">Copy Guest Codes</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60">Status</p>
+                <p className="text-xs font-bold">Cloud Sync Live</p>
               </div>
               <Share2 size={16} />
-            </button>
+            </div>
           )}
           
           <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5">
