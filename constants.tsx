@@ -19,7 +19,7 @@ export const ITINERARY: EventFunction[] = [
     location: 'Poolside Veranda, Villa A',
     dressCode: 'Resort Chic / Tropical',
     description: 'A relaxed sunset gathering with Goan appetizers and cocktails to kick off the celebration. Chai, Nashta aur Gupshup!',
-    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1541336032412-2048a678540d?auto=format&fit=crop&q=80'
   },
   {
     id: 'evt-2',
@@ -29,7 +29,7 @@ export const ITINERARY: EventFunction[] = [
     location: 'Grand Hall, Red Villa',
     dressCode: 'Indo-Western Glitz',
     description: 'Family performances, dancing with DJ Savio, and a gala dinner spread. Nach Gaana aur Thoda Shaur!',
-    image: 'https://images.unsplash.com/photo-1545127398-14699f92334b?auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80'
   },
   {
     id: 'evt-3',
@@ -39,7 +39,7 @@ export const ITINERARY: EventFunction[] = [
     location: 'Estate Lawn',
     dressCode: 'Casual White',
     description: 'A traditional Goan breakfast setup under the morning sun. Garam Nashta aur Taazi Hawa.',
-    image: 'https://images.unsplash.com/photo-1496044530011-c34f12be85b3?auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?auto=format&fit=crop&q=80'
   },
   {
     id: 'evt-4',
@@ -49,103 +49,110 @@ export const ITINERARY: EventFunction[] = [
     location: 'Marinha Dourada Ballroom',
     dressCode: 'Formal Gold & Ivory',
     description: 'The main anniversary event featuring the milestone film, speeches, and the grand jubilee cake. Shandaar Jashn!',
-    image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80'
   }
 ];
 
+// Fix for INITIAL_GUESTS type error and truncation
 export const INITIAL_GUESTS: Guest[] = Array.from({ length: 45 }, (_, i) => ({
   id: `guest-${i + 1}`,
   name: i < 3 ? ['Mom', 'Dad', 'Nisha'][i] : `Guest ${i + 1}`,
-  category: i < 2 ? 'VIP' : (i === 2 ? 'Planner' : 'Family'),
-  side: i === 0 || i === 1 || i === 2 ? 'Common' : (i % 2 === 0 ? 'Ladkewale' : 'Ladkiwale'),
-  property: i < 10 ? 'Villa-Pool' : (i < 15 ? 'Villa-Hall' : (i < 30 ? 'Resort' : 'TreeHouse')),
-  roomNo: (i < 10 ? 101 + i : (i < 15 ? 201 + (i-10) : (i < 30 ? 301 + (i-15) : 401 + (i-30)))).toString(),
-  dietaryNote: i === 0 ? 'No Spicy' : (i === 1 ? 'Diabetic' : 'Standard'),
-  sangeetAct: i === 0 ? 'Main Dance' : (i === 1 ? 'Speech' : (i === 2 ? 'MC' : 'TBD')),
-  pickupScheduled: true,
+  category: i < 3 ? 'Family' : i < 15 ? 'VIP' : 'Friend',
+  side: i % 2 === 0 ? 'Ladkewale' : 'Ladkiwale',
+  property: i < 5 ? 'Villa-Pool' : i < 10 ? 'Villa-Hall' : 'Resort',
+  roomNo: String(101 + (i % 20)),
+  dietaryNote: i % 5 === 0 ? 'Vegan' : 'Standard Veg',
+  sangeetAct: i % 4 === 0 ? 'Solo Dance' : 'TBD',
+  pickupScheduled: i < 5,
   status: 'Pending',
-  dressCode: 'Gold/Ivory',
+  dressCode: 'Indo-Western Glitz',
   mealPlan: {
-    lunch17: 'Goan Buffet',
+    lunch17: 'Goan Coastal Buffet',
     dinner18: 'Royal Thali'
   }
 }));
 
-export const ROOM_DATABASE: RoomDetail[] = [
-  ...Array.from({ length: 10 }, (_, i) => ({
-    roomNo: (101 + i).toString(),
-    property: 'Villa-Pool' as const,
-    title: i === 0 ? 'Heritage Master Suite' : `Poolside Suite ${101+i}`,
-    type: 'Suite' as const,
-    description: 'Breezy white architecture with direct veranda and pool access.',
-    image: 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&q=80',
-    amenities: ['Pool Access', 'AC', 'Four Poster Bed']
-  })),
-  ...Array.from({ length: 5 }, (_, i) => ({
-    roomNo: (201 + i).toString(),
-    property: 'Villa-Hall' as const,
-    title: i === 0 ? 'Grand Hall Suite' : `Red Villa Room ${201+i}`,
-    type: 'Master' as const,
-    description: 'Classic red facade heritage villa with massive interior hall and balconies.',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80',
-    amenities: ['Hall Access', 'Balcony', 'Heritage Decor']
-  }))
-];
+// Fix for missing INITIAL_BUDGET
+export const INITIAL_BUDGET: Budget = {
+  totalBudget: 1500000,
+  villaRate: 65000,
+  villaNights: 2,
+  djRate: 35000,
+  djNights: 1,
+  photoRate: 45000,
+  decorRate: 180000,
+  furnitureRate: 25000,
+  bartenderRate: 15000,
+  accessoriesRate: 8000,
+  finalCateringPax: 45
+};
 
-// Fix: Define and export QUOTATIONS which is used in BudgetTracker.tsx
+// Fix for missing QUOTATIONS
 export const QUOTATIONS: Quotation[] = [
   {
-    vendorName: 'Divyanshi Catering & Events',
-    contactPerson: 'Ms. Divyanshi',
-    phoneNumber: '+91 98765 43210',
+    vendorName: "Divyanshi Gourmet",
+    contactPerson: "Divyanshi Sharma",
+    phoneNumber: "+91 9876543210",
     breakfast: 450,
     lunch: 850,
-    dinner: 1200,
-    galaDinner: 2500,
-    venueRental: 50000,
+    dinner: 1250,
+    galaDinner: 2800,
+    venueRental: 45000,
     roomRate: 0,
     extraPax: 1500,
-    menuHighlights: ['Authentic Goan Thali', 'Live Seafood Counter', 'Heritage Sweets']
+    menuHighlights: ["Lobster Thermidor", "Goan Prawn Curry", "Heritage Bebinca", "Stuffed Squid"]
   },
   {
-    vendorName: 'Marinha Dourada Resort',
-    contactPerson: 'Manager Joseph',
-    phoneNumber: '+91 832 227 0000',
-    breakfast: 600,
+    vendorName: "Marinha Dourada Resort",
+    contactPerson: "Xavier D'Souza",
+    phoneNumber: "+91 9123456789",
+    breakfast: 650,
     lunch: 1100,
-    dinner: 1500,
-    galaDinner: 3000,
+    dinner: 1850,
+    galaDinner: 3500,
     venueRental: 150000,
-    roomRate: 4500,
-    extraPax: 2000,
-    menuHighlights: ['Continental Buffet', 'Poolside BBQ', 'Exotic Cocktails']
-  },
-  {
-    vendorName: 'TreeHouse Nova',
-    contactPerson: 'Front Desk',
-    phoneNumber: '+91 77700 11122',
-    breakfast: 350,
-    lunch: 700,
-    dinner: 1000,
-    galaDinner: 2000,
-    venueRental: 25000,
-    roomRate: 3500,
-    extraPax: 1200,
-    isAlaCarte: true,
-    menuHighlights: ['Boutique Breakfast', 'Local Cafreal', 'Sunset Snacks']
+    roomRate: 4800,
+    extraPax: 2500,
+    menuHighlights: ["Serradura", "Chicken Xacuti", "Vindaloo Surprise", "Portuguese Pastries"]
   }
 ];
 
-export const INITIAL_BUDGET: Budget = {
-  totalBudget: 400000,
-  villaRate: 18000,
-  villaNights: 2,
-  djRate: 5000,
-  djNights: 2,
-  photoRate: 5000,
-  decorRate: 30000,
-  furnitureRate: 10000,
-  bartenderRate: 3000,
-  accessoriesRate: 2000,
-  finalCateringPax: 45
-};
+// Fix for missing ROOM_DATABASE
+export const ROOM_DATABASE: RoomDetail[] = [
+  {
+    roomNo: "101",
+    property: "Villa-Pool",
+    title: "Heritage Master Suite",
+    description: "Grand suite with a private veranda overlooking the pool area.",
+    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80",
+    type: "Master",
+    amenities: ["AC", "En-suite Bath", "Pool Access", "Mini Bar"]
+  },
+  {
+    roomNo: "102",
+    property: "Villa-Pool",
+    title: "Teak Wood Twin",
+    description: "Traditional Goan decor with twin beds and garden views.",
+    image: "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80",
+    type: "Twin",
+    amenities: ["AC", "Garden View", "WiFi"]
+  },
+  {
+    roomNo: "201",
+    property: "Villa-Hall",
+    title: "Royal Red Suite",
+    description: "Elegant room in the heritage wing near the Sangeet hall.",
+    image: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80",
+    type: "Suite",
+    amenities: ["AC", "Balcony", "Room Service"]
+  },
+  {
+    roomNo: "301",
+    property: "Resort",
+    title: "Lagoon View Deluxe",
+    description: "Modern deluxe room with views of the Arpora salt pans.",
+    image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80",
+    type: "Standard",
+    amenities: ["AC", "Lagoon View", "Flat Screen TV"]
+  }
+];

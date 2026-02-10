@@ -13,7 +13,8 @@ import {
   Trees,
   Lock,
   MailCheck,
-  LayoutDashboard
+  LayoutDashboard,
+  LogOut
 } from 'lucide-react';
 import { AppTab, UserRole } from '../types';
 import { EVENT_CONFIG } from '../constants';
@@ -28,37 +29,38 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogout, isOpen, onClose }) => {
+  const isPlanner = role === 'planner';
+
   const menuItems = [
-    { id: 'portal', label: 'My Dashboard', icon: LayoutDashboard, plannerOnly: false, guestOnly: true },
     { id: 'master', label: 'Master List', icon: Users, plannerOnly: false },
     { id: 'rsvp-manager', label: 'RSVP Manager', icon: MailCheck, plannerOnly: true },
     { id: 'venue', label: 'Villa & Pool', icon: Map, plannerOnly: false },
     { id: 'rooms', label: 'Room Map', icon: Bed, plannerOnly: false },
     { id: 'meals', label: 'Meal Plan', icon: Utensils, plannerOnly: false },
-    { id: 'sangeet', label: 'Sangeet Acts', icon: Music, plannerOnly: false },
     { id: 'tree', label: 'Interactive Tree', icon: GitBranch, plannerOnly: false },
     { id: 'budget', label: 'Budget Tracker', icon: IndianRupee, plannerOnly: true },
     { id: 'ai', label: 'AI Assistant', icon: Sparkles, plannerOnly: true },
+    { id: 'portal', label: 'View Guest Invitation', icon: LayoutDashboard, plannerOnly: false },
   ];
 
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 bg-stone-900/50 z-[60] lg:hidden backdrop-blur-sm" onClick={onClose} />
+        <div className="fixed inset-0 bg-stone-900/60 z-[60] lg:hidden backdrop-blur-md animate-in fade-in" onClick={onClose} />
       )}
 
       <div className={`
-        fixed left-0 top-0 h-screen w-64 bg-[#1a1a1a] text-white z-[70] transition-transform duration-300 flex flex-col border-r border-[#D4AF37]/20
+        fixed left-0 top-0 h-screen w-64 bg-[#1a1a1a] text-white z-[70] transition-transform duration-500 ease-out flex flex-col border-r border-[#D4AF37]/20
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-8 border-b border-[#D4AF37]/10 relative overflow-hidden group">
-          <Trees className="absolute -right-4 -bottom-4 text-[#D4AF37]/10 group-hover:scale-110 transition-transform duration-1000" size={80} />
-          <h1 className="text-2xl font-serif font-bold text-[#D4AF37] tracking-tight">{EVENT_CONFIG.theme}</h1>
-          <p className="text-[10px] text-[#B8860B] mt-1 uppercase tracking-[0.2em] font-black">
-            {role === 'planner' ? 'Master Control' : 'Guest Preview Mode'}
+        <div className="p-10 border-b border-[#D4AF37]/10 relative overflow-hidden group">
+          <Trees className="absolute -right-6 -bottom-6 text-[#D4AF37]/5 group-hover:scale-125 transition-transform duration-1000" size={120} />
+          <h1 className="text-2xl font-serif font-bold text-[#D4AF37] tracking-tight relative z-10">{EVENT_CONFIG.theme}</h1>
+          <p className="text-[10px] text-[#B8860B] mt-1 uppercase tracking-[0.3em] font-black relative z-10">
+            {isPlanner ? 'Royal Planner Hub' : 'Guest Preview'}
           </p>
-          <button onClick={onClose} className="lg:hidden absolute top-4 right-4 text-stone-500">
-            <X size={20} />
+          <button onClick={onClose} className="lg:hidden absolute top-6 right-6 text-[#D4AF37]/40 hover:text-[#D4AF37]">
+            <X size={24} />
           </button>
         </div>
 
@@ -66,25 +68,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
-            const isLocked = item.plannerOnly && role !== 'planner';
+            const isLocked = item.plannerOnly && !isPlanner;
             
-            if (item.guestOnly && role !== 'guest') return null;
-
             return (
               <button
                 key={item.id}
                 onClick={() => !isLocked && setActiveTab(item.id as AppTab)}
                 disabled={isLocked}
-                className={`w-full flex items-center justify-between px-5 py-3.5 rounded-2xl transition-all relative overflow-hidden ${
+                className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl transition-all relative overflow-hidden group ${
                   isActive 
-                    ? 'bg-[#D4AF37] text-[#1a1a1a] font-bold shadow-lg scale-[1.02]' 
+                    ? 'bg-[#D4AF37] text-stone-900 font-bold shadow-[0_10px_20px_rgba(212,175,55,0.2)] scale-[1.02]' 
                     : isLocked 
                       ? 'text-stone-700 cursor-not-allowed grayscale' 
                       : 'text-stone-400 hover:text-[#D4AF37] hover:bg-white/5'
                 }`}
               >
                 <div className="flex items-center gap-4">
-                  <Icon size={18} className={isActive ? 'text-[#1a1a1a]' : ''} />
+                  <Icon size={18} className={isActive ? 'text-stone-900' : 'group-hover:scale-110 transition-transform'} />
                   <span className="text-sm tracking-wide">{item.label}</span>
                 </div>
                 {isLocked && <Lock size={12} className="text-stone-800" />}
@@ -93,24 +93,24 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
           })}
         </nav>
         
-        <div className="p-6 space-y-3 mt-auto border-t border-[#D4AF37]/10">
-          {role === 'planner' && (
-            <div className="p-4 bg-[#D4AF37]/5 text-[#D4AF37] rounded-2xl border border-[#D4AF37]/20 flex items-center justify-between group">
+        <div className="p-6 space-y-3 mt-auto border-t border-[#D4AF37]/10 bg-black/20">
+          {isPlanner && (
+            <div className="p-4 bg-[#D4AF37]/5 text-[#D4AF37] rounded-2xl border border-[#D4AF37]/20 flex items-center justify-between">
               <div className="text-left">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60">Status</p>
-                <p className="text-xs font-bold">Cloud Sync Live</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60">Session</p>
+                <p className="text-xs font-bold">Admin Active</p>
               </div>
-              <Share2 size={16} />
+              <Share2 size={16} className="animate-pulse" />
             </div>
           )}
           
-          <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5">
-            <div className={`w-2 h-2 rounded-full ${role === 'planner' ? 'bg-[#D4AF37]' : 'bg-stone-500'}`}></div>
-            <p className="text-[10px] text-stone-500 font-black uppercase tracking-widest">{role?.toUpperCase()}</p>
-            <button onClick={onLogout} className="ml-auto text-stone-500 hover:text-red-400 transition-colors">
-              <X size={16} />
-            </button>
-          </div>
+          <button 
+            onClick={onLogout}
+            className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 text-stone-500 hover:text-red-400 hover:bg-red-400/5 transition-all group"
+          >
+            <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <p className="text-[10px] font-black uppercase tracking-widest">Logout</p>
+          </button>
         </div>
       </div>
     </>
