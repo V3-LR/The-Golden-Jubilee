@@ -29,7 +29,7 @@ export const ITINERARY: EventFunction[] = [
     location: 'Grand Hall, Red Villa',
     dressCode: 'Indo-Western Glitz',
     description: 'Family performances, dancing with DJ Savio, and a gala dinner spread. Nach Gaana aur Thoda Shaur!',
-    image: 'https://images.unsplash.com/photo-1514525253361-bee8718a300a?auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1545127398-14699f92334b?auto=format&fit=crop&q=80'
   },
   {
     id: 'evt-3',
@@ -49,7 +49,7 @@ export const ITINERARY: EventFunction[] = [
     location: 'Marinha Dourada Ballroom',
     dressCode: 'Formal Gold & Ivory',
     description: 'The main anniversary event featuring the milestone film, speeches, and the grand jubilee cake. Shandaar Jashn!',
-    image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80'
   }
 ];
 
@@ -71,35 +71,6 @@ export const INITIAL_GUESTS: Guest[] = Array.from({ length: 45 }, (_, i) => ({
   }
 }));
 
-export const QUOTATIONS: Quotation[] = [
-  {
-    vendorName: 'Divyanshi Hospitality',
-    contactPerson: 'Rahul Sharma',
-    phoneNumber: '+91 98765 43210',
-    breakfast: 450,
-    lunch: 900,
-    dinner: 900,
-    galaDinner: 1250,
-    venueRental: 0,
-    roomRate: 0,
-    extraPax: 45,
-    menuHighlights: ['Authentic Goan Fish Curry', 'Royal Veg Thali', 'Live Jalebi Counter']
-  },
-  {
-    vendorName: 'Resorte Marinha Dourada',
-    contactPerson: 'Maria Fernandes',
-    phoneNumber: '+91 88888 77777',
-    breakfast: 400,
-    lunch: 800,
-    dinner: 800,
-    galaDinner: 2300,
-    venueRental: 200000,
-    roomRate: 3000,
-    extraPax: 45,
-    menuHighlights: ['Continental Buffet', 'Italian Pasta Station', 'Premium Bar Setup']
-  }
-];
-
 export const ROOM_DATABASE: RoomDetail[] = [
   ...Array.from({ length: 10 }, (_, i) => ({
     roomNo: (101 + i).toString(),
@@ -107,7 +78,7 @@ export const ROOM_DATABASE: RoomDetail[] = [
     title: i === 0 ? 'Heritage Master Suite' : `Poolside Suite ${101+i}`,
     type: 'Suite' as const,
     description: 'Breezy white architecture with direct veranda and pool access.',
-    image: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&q=80',
     amenities: ['Pool Access', 'AC', 'Four Poster Bed']
   })),
   ...Array.from({ length: 5 }, (_, i) => ({
@@ -119,6 +90,50 @@ export const ROOM_DATABASE: RoomDetail[] = [
     image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80',
     amenities: ['Hall Access', 'Balcony', 'Heritage Decor']
   }))
+];
+
+// Fix: Define and export QUOTATIONS which is used in BudgetTracker.tsx
+export const QUOTATIONS: Quotation[] = [
+  {
+    vendorName: 'Divyanshi Catering & Events',
+    contactPerson: 'Ms. Divyanshi',
+    phoneNumber: '+91 98765 43210',
+    breakfast: 450,
+    lunch: 850,
+    dinner: 1200,
+    galaDinner: 2500,
+    venueRental: 50000,
+    roomRate: 0,
+    extraPax: 1500,
+    menuHighlights: ['Authentic Goan Thali', 'Live Seafood Counter', 'Heritage Sweets']
+  },
+  {
+    vendorName: 'Marinha Dourada Resort',
+    contactPerson: 'Manager Joseph',
+    phoneNumber: '+91 832 227 0000',
+    breakfast: 600,
+    lunch: 1100,
+    dinner: 1500,
+    galaDinner: 3000,
+    venueRental: 150000,
+    roomRate: 4500,
+    extraPax: 2000,
+    menuHighlights: ['Continental Buffet', 'Poolside BBQ', 'Exotic Cocktails']
+  },
+  {
+    vendorName: 'TreeHouse Nova',
+    contactPerson: 'Front Desk',
+    phoneNumber: '+91 77700 11122',
+    breakfast: 350,
+    lunch: 700,
+    dinner: 1000,
+    galaDinner: 2000,
+    venueRental: 25000,
+    roomRate: 3500,
+    extraPax: 1200,
+    isAlaCarte: true,
+    menuHighlights: ['Boutique Breakfast', 'Local Cafreal', 'Sunset Snacks']
+  }
 ];
 
 export const INITIAL_BUDGET: Budget = {
@@ -133,13 +148,4 @@ export const INITIAL_BUDGET: Budget = {
   bartenderRate: 3000,
   accessoriesRate: 2000,
   finalCateringPax: 45
-};
-
-export const COLORS = {
-  gold: '#D4AF37',
-  goldDeep: '#B8860B',
-  sand: '#FEF9E7',
-  sandDark: '#F3E5AB',
-  text: '#2D2926',
-  accent: '#7C2D12'
 };

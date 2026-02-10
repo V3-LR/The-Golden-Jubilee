@@ -11,7 +11,6 @@ import RoomMap from './components/RoomMap';
 import Login from './components/Login';
 import RSVPManager from './components/RSVPManager';
 import GuestPortal from './components/GuestPortal';
-import DeploymentHub from './components/DeploymentHub';
 import { Menu, RefreshCw, ShieldCheck, Lock, UserPlus } from 'lucide-react';
 
 const STORAGE_ID = 'GOLDEN_JUBILEE_V10_PRO';
@@ -196,61 +195,66 @@ const App: React.FC = () => {
     if (activeTab === 'tree') return <TreeView guests={guests} />;
     if (activeTab === 'budget') return <BudgetTracker budget={budget} onUpdateBudget={(u) => setBudget(p => ({...p, ...u}))} guests={guests} isPlanner={userRole === 'planner'} />;
     if (activeTab === 'ai') return <AIPlanner guests={guests} />;
-    if (activeTab === 'deployment') return <DeploymentHub />;
 
     return <div className="p-20 text-center font-serif text-stone-400">Loading Estate Data...</div>;
   };
 
-  return (
-    <div className="min-h-screen bg-[#FCFAF2] flex">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }} 
-        role={userRole} 
-        onLogout={handleLogout} 
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      
-      <main className="flex-grow min-h-screen lg:ml-64 w-full">
-        <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[40] border-b border-[#D4AF37]/10">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={20} /></button>
-            <div className="flex flex-col">
-              <span className={`text-[9px] font-black uppercase tracking-[0.3em] mb-1 transition-colors ${isSyncing ? 'text-amber-500' : 'text-[#B8860B]'}`}>
-                {isSyncing ? 'Syncing Network...' : 'Estate Sync Active'}
-              </span>
-              <h2 className="text-sm md:text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h2>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {saveIndicator ? (
-              <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full shadow-2xl animate-in zoom-in">
-                <ShieldCheck size={16} className="text-[#D4AF37]" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Saved to Cloud</span>
-              </div>
-            ) : (
-              <button 
-                onClick={forceSync}
-                className={`flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 shadow-xl hover:border-[#D4AF37] transition-all group ${isSyncing ? 'animate-pulse' : ''}`}
-              >
-                <Lock size={16} className="text-[#D4AF37]" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Global Master Save</span>
-              </button>
-            )}
-            
-            <button 
-              onClick={handleLogout}
-              className="p-3 bg-white border border-stone-100 rounded-xl text-stone-300 hover:text-[#B8860B] transition-all shadow-sm"
-              title="Reset Session"
-            >
-              <RefreshCw size={18} />
-            </button>
-          </div>
-        </header>
+  const isGuestView = userRole === 'guest';
 
-        <div className="max-w-7xl mx-auto px-4 md:px-10 py-10">
+  return (
+    <div className={`min-h-screen bg-[#FCFAF2] flex ${isGuestView ? 'flex-col' : ''}`}>
+      {!isGuestView && (
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }} 
+          role={userRole} 
+          onLogout={handleLogout} 
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+      )}
+      
+      <main className={`flex-grow min-h-screen w-full ${isGuestView ? '' : 'lg:ml-64'}`}>
+        {!isGuestView && (
+          <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[40] border-b border-[#D4AF37]/10">
+            <div className="flex items-center gap-4">
+              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={20} /></button>
+              <div className="flex flex-col">
+                <span className={`text-[9px] font-black uppercase tracking-[0.3em] mb-1 transition-colors ${isSyncing ? 'text-amber-500' : 'text-[#B8860B]'}`}>
+                  {isSyncing ? 'Syncing Network...' : 'Estate Sync Active'}
+                </span>
+                <h2 className="text-sm md:text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h2>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {saveIndicator ? (
+                <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full shadow-2xl animate-in zoom-in">
+                  <ShieldCheck size={16} className="text-[#D4AF37]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Saved to Cloud</span>
+                </div>
+              ) : (
+                <button 
+                  onClick={forceSync}
+                  className={`flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 shadow-xl hover:border-[#D4AF37] transition-all group ${isSyncing ? 'animate-pulse' : ''}`}
+                >
+                  <Lock size={16} className="text-[#D4AF37]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Global Master Save</span>
+                </button>
+              )}
+              
+              <button 
+                onClick={handleLogout}
+                className="p-3 bg-white border border-stone-100 rounded-xl text-stone-300 hover:text-[#B8860B] transition-all shadow-sm"
+                title="Reset Session"
+              >
+                <RefreshCw size={18} />
+              </button>
+            </div>
+          </header>
+        )}
+
+        <div className={`${isGuestView ? 'w-full' : 'max-w-7xl mx-auto px-4 md:px-10 py-10'}`}>
           {renderContent()}
         </div>
       </main>
