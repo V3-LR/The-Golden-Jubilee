@@ -4,7 +4,11 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // For Vercel, the base should be '/'
+  base: '/',
   define: {
-    'process.env': process.env
+    'process.env': {
+      API_KEY: process.env.API_KEY
+    }
   }
 });

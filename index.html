@@ -18,6 +18,8 @@
             background-color: var(--sand);
             background-image: radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.05) 0%, transparent 70%);
             color: #2D2926;
+            margin: 0;
+            padding: 0;
         }
         .font-serif { font-family: 'Playfair Display', serif; }
         .font-cinzel { font-family: 'Cinzel', serif; }
@@ -32,14 +34,6 @@
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-        
-        .premium-card {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: 2rem;
-            box-shadow: 0 15px 35px rgba(184, 134, 11, 0.1);
-        }
     </style>
 <script type="importmap">
 {
@@ -50,6 +44,7 @@
     "lucide-react": "https://esm.sh/lucide-react@0.475.0",
     "recharts": "https://esm.sh/recharts@^3.7.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react-dom": "https://esm.sh/react-dom@^19.2.4",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4",
     "vite": "https://esm.sh/vite@^7.3.1"
   }
@@ -58,5 +53,7 @@
 </head>
 <body>
     <div id="root"></div>
+    <!-- CRITICAL: This script tag was missing, which is why the page was blank -->
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>
