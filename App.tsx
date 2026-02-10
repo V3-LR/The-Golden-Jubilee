@@ -11,9 +11,9 @@ import RoomMap from './components/RoomMap';
 import Login from './components/Login';
 import RSVPManager from './components/RSVPManager';
 import GuestPortal from './components/GuestPortal';
-import { Menu, ShieldCheck, Lock, UserPlus, EyeOff } from 'lucide-react';
+import { Menu, ShieldCheck, Lock, UserPlus, EyeOff, CheckCircle } from 'lucide-react';
 
-const STORAGE_ID = 'GOLDEN_JUBILEE_V12_SYNC';
+const STORAGE_ID = 'GOLDEN_JUBILEE_V15_MASTER';
 const G_KEY = `${STORAGE_ID}_GUESTS`;
 const S_KEY = `${STORAGE_ID}_SESSION`;
 
@@ -71,7 +71,7 @@ const App: React.FC = () => {
     }
   }, [userRole, activeGuestId, activeTab]);
 
-  // 3. MAGIC LINK HANDLING & PERSISTENCE
+  // 3. MAGIC LINK PERSISTENCE
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const guestIdFromUrl = params.get('id');
@@ -79,8 +79,7 @@ const App: React.FC = () => {
     if (guestIdFromUrl) {
       const exists = guests.find(g => g.id === guestIdFromUrl);
       if (exists) {
-        // If they are already a planner, keep them as planner but show guest view
-        if (!userRole) {
+        if (userRole !== 'planner') {
           setUserRole('guest');
         }
         setActiveGuestId(guestIdFromUrl);
@@ -89,7 +88,7 @@ const App: React.FC = () => {
     }
   }, [guests, userRole]);
 
-  // Sync Guests to storage on every change
+  // Sync Guests to storage
   useEffect(() => {
     localStorage.setItem(G_KEY, JSON.stringify(guests));
   }, [guests]);
@@ -99,8 +98,7 @@ const App: React.FC = () => {
     setGuests((prev) => 
       prev.map((guest) => (guest.id === id ? { ...guest, ...updates } : guest))
     );
-    // Mimic cloud sync delay
-    setTimeout(() => setIsSyncing(false), 400);
+    setTimeout(() => setIsSyncing(false), 300);
   }, []);
 
   const handleTeleport = (guestId: string) => {
@@ -116,7 +114,7 @@ const App: React.FC = () => {
   const handleAddGuest = () => {
     const newGuest: Guest = {
       id: `guest-${Date.now()}`,
-      name: 'New Honored Guest',
+      name: 'New Family Member',
       category: 'Family',
       side: 'Common',
       property: 'Resort',
@@ -156,16 +154,21 @@ const App: React.FC = () => {
       return (
         <div className="space-y-4">
           {userRole === 'planner' && (
-            <div className="bg-stone-900 text-white p-4 rounded-[2rem] flex items-center justify-between border-2 border-[#D4AF37] shadow-2xl mb-8">
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="text-[#D4AF37]" size={20} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Planner Preview: <strong className="text-[#D4AF37]">{currentGuest.name}</strong></span>
+            <div className="bg-stone-900 text-white p-5 rounded-[2.5rem] flex flex-col sm:flex-row items-center justify-between border-2 border-[#D4AF37] shadow-2xl mb-10 gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-[#D4AF37]/20 rounded-xl">
+                  <ShieldCheck className="text-[#D4AF37]" size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/60">Planner View Mode</p>
+                  <p className="text-sm font-bold">Previewing: <span className="text-[#D4AF37]">{currentGuest.name}</span></p>
+                </div>
               </div>
               <button 
                 onClick={() => setActiveTab('master')}
-                className="bg-[#D4AF37] text-stone-900 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-white transition-colors"
+                className="w-full sm:w-auto bg-[#D4AF37] text-stone-900 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white transition-all shadow-lg"
               >
-                <EyeOff size={14} /> Back to Master Admin
+                <EyeOff size={16} /> Exit Preview & Return to Master
               </button>
             </div>
           )}
@@ -184,7 +187,7 @@ const App: React.FC = () => {
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#B8860B]">Master Authority Controller</span>
               </div>
               <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master Database</h2>
-              <p className="text-stone-500 text-sm italic">Changes here sync instantly to Room Maps, Meal Plans, and Guest Invites.</p>
+              <p className="text-stone-500 text-sm italic">Status updates to 'Coming' automatically when guests submit RSVPs.</p>
             </div>
             {userRole === 'planner' && (
               <button 
@@ -201,9 +204,10 @@ const App: React.FC = () => {
             columns={[
               { key: 'name', label: 'HONORED NAME', editable: userRole === 'planner' },
               { key: 'side', label: 'FAMILY SIDE', editable: userRole === 'planner', type: 'select', options: ['Ladkiwale', 'Ladkewale', 'Common'] },
+              { key: 'paxCount', label: 'PAX', render: (g) => <span className="font-black text-stone-900">{g.paxCount || 1}</span> },
               { key: 'property', label: 'STAY', editable: userRole === 'planner', type: 'select', options: ['Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] },
               { key: 'roomNo', label: 'ROOM #', editable: userRole === 'planner' },
-              { key: 'status', label: 'RSVP STATUS', editable: userRole === 'planner', type: 'select', options: ['Confirmed', 'Pending', 'Declined'] },
+              { key: 'status', label: 'STATUS', editable: userRole === 'planner', type: 'select', options: ['Confirmed', 'Pending', 'Declined'] },
             ]}
           />
         </div>
@@ -231,12 +235,11 @@ const App: React.FC = () => {
     return <div className="p-20 text-center font-serif text-stone-400">Loading Estate Data...</div>;
   };
 
-  // Sidebar is hidden ONLY for real guests (no planner session)
-  const showSidebar = userRole === 'planner';
+  const isStrictGuest = userRole === 'guest';
 
   return (
     <div className={`min-h-screen bg-[#FCFAF2] flex flex-col lg:flex-row`}>
-      {showSidebar && (
+      {!isStrictGuest && (
         <Sidebar 
           activeTab={activeTab} 
           setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }} 
@@ -247,14 +250,14 @@ const App: React.FC = () => {
         />
       )}
       
-      <main className={`flex-grow min-h-screen w-full transition-all duration-500 ${showSidebar ? 'lg:ml-64' : ''}`}>
-        {showSidebar && (
+      <main className={`flex-grow min-h-screen w-full transition-all duration-500 ${!isStrictGuest ? 'lg:ml-64' : ''}`}>
+        {!isStrictGuest && (
           <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[40] border-b border-[#D4AF37]/10">
             <div className="flex items-center gap-4">
               <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B] hover:scale-110 transition-transform"><Menu size={24} /></button>
               <div className="flex flex-col">
                 <span className={`text-[9px] font-black uppercase tracking-[0.3em] mb-1 transition-colors ${isSyncing ? 'text-amber-500' : 'text-[#B8860B]'}`}>
-                  {isSyncing ? 'Synchronizing Network...' : 'Estate Sync Online'}
+                  {isSyncing ? 'Syncing Network...' : 'Estate Sync Online'}
                 </span>
                 <h2 className="text-sm md:text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h2>
               </div>
@@ -263,8 +266,8 @@ const App: React.FC = () => {
             <div className="flex items-center gap-3">
               {saveIndicator ? (
                 <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full shadow-2xl animate-in zoom-in duration-300">
-                  <ShieldCheck size={16} className="text-[#D4AF37]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Storage Locked</span>
+                  <CheckCircle size={16} className="text-[#D4AF37]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Saved</span>
                 </div>
               ) : (
                 <button 
@@ -272,14 +275,14 @@ const App: React.FC = () => {
                   className={`flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 shadow-xl hover:border-[#D4AF37] transition-all group ${isSyncing ? 'animate-pulse' : ''}`}
                 >
                   <Lock size={16} className="text-[#D4AF37]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Global Snapshot</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Master Save</span>
                 </button>
               )}
             </div>
           </header>
         )}
 
-        <div className={`${!showSidebar ? 'w-full' : 'max-w-7xl mx-auto px-4 md:px-10 py-10'}`}>
+        <div className={`${isStrictGuest ? 'w-full' : 'max-w-7xl mx-auto px-4 md:px-10 py-10'}`}>
           {renderContent()}
         </div>
       </main>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Guest } from '../types';
-import { Edit3, CheckCircle2 } from 'lucide-react';
+import { Edit3 } from 'lucide-react';
 
 interface DataTableProps {
   guests: Guest[];
@@ -19,15 +19,19 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const getSideColor = (side: string) => {
-    if (side === 'Ladkiwale') return 'bg-pink-50 text-pink-600 border-pink-100';
-    if (side === 'Ladkewale') return 'bg-blue-50 text-blue-600 border-blue-100';
-    return 'bg-stone-50 text-stone-600 border-stone-100';
+    if (side === 'Ladkiwale') return 'bg-pink-100 text-pink-700 border-pink-200';
+    if (side === 'Ladkewale') return 'bg-blue-100 text-blue-700 border-blue-200';
+    return 'bg-stone-100 text-stone-600 border-stone-200';
   };
 
   const getStatusColor = (status: string) => {
-    if (status === 'Confirmed') return 'bg-green-50 text-green-600 border-green-100';
-    if (status === 'Declined') return 'bg-red-50 text-red-600 border-red-100';
-    return 'bg-amber-50 text-amber-600 border-amber-100';
+    if (status === 'Confirmed') return 'bg-green-100 text-green-700 border-green-200';
+    if (status === 'Declined') return 'bg-red-100 text-red-700 border-red-200';
+    return 'bg-amber-100 text-amber-700 border-amber-200';
+  };
+
+  const getStatusLabel = (status: string) => {
+    return status === 'Confirmed' ? 'Coming' : status;
   };
 
   return (
@@ -56,7 +60,7 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
                           {col.type === 'select' ? (
                             <div className="relative">
                               <select
-                                className={`appearance-none bg-white border-2 hover:border-[#D4AF37] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/10 w-full transition-all cursor-pointer font-bold shadow-sm ${
+                                className={`appearance-none bg-white border-2 hover:border-[#D4AF37] rounded-xl px-4 py-2.5 text-[11px] focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/10 w-full transition-all cursor-pointer font-black tracking-widest uppercase shadow-sm ${
                                   col.key === 'side' ? getSideColor(String(guest.side)) : 
                                   col.key === 'status' ? getStatusColor(String(guest.status)) : 'text-stone-900 border-stone-100'
                                 }`}
@@ -68,7 +72,7 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
                                 ))}
                               </select>
                               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
-                                <Edit3 size={10} />
+                                <Edit3 size={12} />
                               </div>
                             </div>
                           ) : (
@@ -87,8 +91,11 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
                           )}
                         </div>
                       ) : (
-                        <span className="text-xs font-bold text-stone-900">
-                          {String(guest[col.key as keyof Guest] || '-')}
+                        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${
+                          col.key === 'side' ? getSideColor(String(guest.side)) : 
+                          col.key === 'status' ? getStatusColor(String(guest.status)) : 'text-stone-900'
+                        }`}>
+                          {col.key === 'status' ? getStatusLabel(String(guest[col.key as keyof Guest] || '-')) : String(guest[col.key as keyof Guest] || '-')}
                         </span>
                       )}
                     </td>

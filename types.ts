@@ -59,24 +59,6 @@ export interface RoomDetail {
   amenities: string[];
 }
 
-export interface Quotation {
-  vendorName: string;
-  contactPerson: string;
-  phoneNumber: string;
-  breakfast: number;
-  lunch: number;
-  dinner: number;
-  galaDinner: number;
-  venueRental: number;
-  roomRate: number;
-  extraPax: number;
-  isAlaCarte?: boolean;
-  menuHighlights?: string[];
-  isFinalized?: boolean;
-}
-
-export type AppTab = 'master' | 'venue' | 'rooms' | 'meals' | 'sangeet' | 'tree' | 'budget' | 'ai' | 'rsvp-manager' | 'rsvp-form' | 'portal' | 'deployment';
-
 export interface Budget {
   totalBudget: number;
   villaRate: number;
@@ -90,3 +72,20 @@ export interface Budget {
   accessoriesRate: number;
   finalCateringPax: number;
 }
+
+// Added missing Quotation interface to resolve build errors in constants.tsx and BudgetTracker.tsx
+export interface Quotation {
+  vendorName: string;
+  contactPerson: string;
+  phoneNumber: string;
+  breakfast: number;
+  lunch: number;
+  dinner: number;
+  galaDinner: number;
+  venueRental: number;
+  roomRate: number;
+  extraPax: number;
+  menuHighlights: string[];
+}
+
+export type AppTab = 'master' | 'venue' | 'rooms' | 'meals' | 'sangeet' | 'tree' | 'budget' | 'ai' | 'rsvp-manager' | 'rsvp-form' | 'portal' | 'deployment';

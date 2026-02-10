@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Guest, FamilyMember } from '../types';
-import { Heart, Sun, Trees, CheckCircle, ArrowRight, Users, X, Plus, Trash2, ShieldCheck } from 'lucide-react';
+import { Heart, CheckCircle, ArrowRight, Users, X, Plus, Trash2, ShieldCheck } from 'lucide-react';
 
 interface RSVPFormProps {
   guest: Guest;
@@ -11,7 +11,7 @@ interface RSVPFormProps {
 
 const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, onExitSimulation }) => {
   const [formData, setFormData] = useState<Partial<Guest>>({
-    status: guest.status || 'Confirmed',
+    status: guest.status === 'Confirmed' ? 'Confirmed' : 'Pending',
     side: guest.side || 'Common',
     familyMembers: guest.familyMembers || [],
     allergies: guest.allergies || '',
@@ -42,8 +42,16 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Only set to confirmed if they didn't explicitly decline (though we don't have a decline button here currently)
+    const newStatus = formData.status === 'Declined' ? 'Declined' : 'Confirmed';
     const totalPax = 1 + (formData.familyMembers?.length || 0);
-    onSubmit({ ...formData, paxCount: totalPax, rsvpTimestamp: new Date().toISOString() });
+    
+    onSubmit({ 
+      ...formData, 
+      status: newStatus,
+      paxCount: totalPax, 
+      rsvpTimestamp: new Date().toISOString() 
+    });
     setSubmitted(true);
   };
 
@@ -88,7 +96,6 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
       )}
 
       <div className="max-w-3xl mx-auto space-y-12">
-        {/* Header Invitation Style */}
         <div className="text-center space-y-4 mb-12">
            <p className="font-cinzel text-[#B8860B] text-xl uppercase tracking-[0.5em]">Goa Bulaye Re!</p>
            <h1 className="text-4xl md:text-6xl font-serif font-bold text-stone-900">Mummy & Papa ki <span className="text-[#B8860B]">50vi Saalgira</span></h1>
@@ -131,21 +138,22 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
                  onClick={addFamilyMember}
                  className="flex items-center gap-2 px-4 py-2 bg-[#FEF9E7] text-[#B8860B] rounded-full text-[10px] font-black uppercase tracking-widest border border-[#D4AF37]/20 hover:scale-105 transition-all"
                >
-                 <Plus size={14} /> Add Kids/Husband
+                 <Plus size={14} /> Add Member
                </button>
             </div>
             
             <div className="space-y-4">
               {formData.familyMembers?.map((member, idx) => (
-                <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-stone-50 p-6 rounded-[2rem] border border-stone-100 animate-in slide-in-from-right-4 duration-500">
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-stone-50 p-6 rounded-[2rem] border border-stone-100">
                   <div className="space-y-2">
                     <label className="text-[9px] font-black uppercase text-stone-400 ml-2">Name</label>
                     <input 
                       type="text" 
-                      placeholder="e.g. Rahul"
+                      placeholder="Name"
                       value={member.name}
                       onChange={(e) => updateFamilyMember(idx, 'name', e.target.value)}
                       className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold text-stone-900 focus:outline-none focus:border-[#D4AF37]"
+                      required
                     />
                   </div>
                   <div className="space-y-2">
@@ -162,7 +170,7 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
                     <button 
                       type="button"
                       onClick={() => removeFamilyMember(idx)}
-                      className="flex-grow md:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-white border border-red-100 text-red-500 rounded-xl hover:bg-red-50 transition-all text-[10px] font-black uppercase tracking-widest"
+                      className="flex-grow flex items-center justify-center gap-2 px-6 py-3.5 bg-white border border-red-100 text-red-500 rounded-xl hover:bg-red-50 transition-all text-[10px] font-black uppercase tracking-widest"
                     >
                       <Trash2 size={14} /> Remove
                     </button>
@@ -170,7 +178,7 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
                 </div>
               ))}
               {formData.familyMembers?.length === 0 && (
-                <p className="text-center text-stone-400 italic text-sm py-4">Are husband and kids joining? Add them above!</p>
+                <p className="text-center text-stone-400 italic text-sm py-4">Are family members joining? Add them above!</p>
               )}
             </div>
           </div>
