@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Guest, AppTab, Budget, UserRole } from './types';
 import { INITIAL_GUESTS, INITIAL_BUDGET, EVENT_CONFIG } from './constants';
@@ -14,7 +13,7 @@ import RSVPManager from './components/RSVPManager';
 import RSVPForm from './components/RSVPForm';
 import GuestPortal from './components/GuestPortal';
 import DeploymentHub from './components/DeploymentHub';
-import { Menu, Save, UserPlus, RefreshCw, ShieldCheck, Lock, CloudSync } from 'lucide-react';
+import { Menu, Save, UserPlus, RefreshCw, ShieldCheck, Lock } from 'lucide-react';
 
 const STORAGE_ID = 'GOLDEN_JUBILEE_V10_PRO';
 const G_KEY = `${STORAGE_ID}_GUESTS`;
