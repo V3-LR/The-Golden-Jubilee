@@ -1,11 +1,27 @@
-<div align="center">
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+# 🌴 Golden Jubilee: The Goa Anniversary Planner
 
-  <h1>Built with AI Studio</h2>
+This is a high-end, bespoke event management application designed for the 50th Wedding Anniversary (Golden Jubilee) celebration in Goa.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## 🚀 Quick Deployment (How to go Live)
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+1. **GitHub**: Create a new repository on [GitHub](https://github.com/new).
+2. **Upload**: Upload all files from this project to that repository.
+3. **Vercel**: Go to [Vercel](https://vercel.com), click "Add New Project", and select this GitHub repo.
+4. **Environment Variable**: This is the most important step! 
+   - In Vercel settings, go to **Environment Variables**.
+   - Add a new variable: `API_KEY`.
+   - Paste your Google Gemini API Key there.
+5. **Deploy**: Click Deploy. Your app is now live on a real URL!
 
-</div>
+## 🛠 Features
+- **Master Data Sync**: Edit a name once, it updates everywhere (Rooms, Meals, Portals).
+- **Guest Portals**: Personalized views for every guest using unique IDs.
+- **AI Logistics**: Gemini-powered batching and menu suggestions.
+- **Financial Dashboard**: Real-time budget tracking and vendor comparison.
+
+## 🔑 Tech Stack
+- React 19
+- Tailwind CSS (Premium Heritage Theme)
+- Google Gemini API
+- Lucide React Icons

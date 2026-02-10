@@ -1,0 +1,7 @@
+{
+  "name": "Anniversary Master Planner",
+  "description": "A sophisticated event planning tool with master data synchronization, interactive tree views, and Gemini-powered logistics assistance for high-end celebrations.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
