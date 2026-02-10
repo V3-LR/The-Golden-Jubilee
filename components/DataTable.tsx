@@ -31,6 +31,7 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
   };
 
   const getStatusLabel = (status: string) => {
+    // Explicitly show 'Coming' for confirmed guests to match user request
     return status === 'Confirmed' ? 'Coming' : status;
   };
 
@@ -65,10 +66,10 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
                                   col.key === 'status' ? getStatusColor(String(guest.status)) : 'text-stone-900 border-stone-100'
                                 }`}
                                 value={String(guest[col.key as keyof Guest] || '')}
-                                onChange={(e) => onUpdate(guest.id, { [col.key]: e.target.value })}
+                                onChange={(e) => onUpdate(guest.id, { [col.key]: e.target.value as any })}
                               >
                                 {col.options?.map(opt => (
-                                  <option key={opt} value={opt}>{opt}</option>
+                                  <option key={opt} value={opt}>{opt === 'Confirmed' ? 'Coming' : opt}</option>
                                 ))}
                               </select>
                               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
@@ -92,8 +93,8 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
                         </div>
                       ) : (
                         <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${
-                          col.key === 'side' ? getSideColor(String(guest.side)) : 
-                          col.key === 'status' ? getStatusColor(String(guest.status)) : 'text-stone-900'
+                          col.key === 'status' ? getStatusColor(String(guest.status)) : 
+                          col.key === 'side' ? getSideColor(String(guest.side)) : 'text-stone-900 border-transparent'
                         }`}>
                           {col.key === 'status' ? getStatusLabel(String(guest[col.key as keyof Guest] || '-')) : String(guest[col.key as keyof Guest] || '-')}
                         </span>

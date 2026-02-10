@@ -42,8 +42,11 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Only set to confirmed if they didn't explicitly decline (though we don't have a decline button here currently)
+    
+    // Automatically elevate status to 'Confirmed' upon submission of details
     const newStatus = formData.status === 'Declined' ? 'Declined' : 'Confirmed';
+    
+    // Calculate total pax: Main guest (1) + all family members
     const totalPax = 1 + (formData.familyMembers?.length || 0);
     
     onSubmit({ 

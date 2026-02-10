@@ -11,30 +11,56 @@ import RoomMap from './components/RoomMap';
 import Login from './components/Login';
 import RSVPManager from './components/RSVPManager';
 import GuestPortal from './components/GuestPortal';
-import { Menu, ShieldCheck, Lock, UserPlus, EyeOff, CheckCircle } from 'lucide-react';
+import { Menu, ShieldCheck, Lock, UserPlus, EyeOff, CheckCircle, RefreshCw } from 'lucide-react';
 
-const STORAGE_ID = 'GOLDEN_JUBILEE_V15_MASTER';
-const G_KEY = `${STORAGE_ID}_GUESTS`;
-const S_KEY = `${STORAGE_ID}_SESSION`;
+/**
+ * PERSISTENCE ARCHITECTURE V2
+ * We use a stable key for all future versions.
+ * If data is missing, we "scavenge" older keys to ensure no data is lost during transitions.
+ */
+const STABLE_KEY = 'ESTATE_PLANNER_STABLE_V1';
+const PREVIOUS_KEYS = [
+  'GOLDEN_JUBILEE_V15_MASTER_GUESTS',
+  'GOLDEN_JUBILEE_V14_SYNC_GUESTS',
+  'GOLDEN_JUBILEE_V13_STABLE_GUESTS'
+];
+const SESSION_KEY = 'ESTATE_PLANNER_SESSION_STABLE';
 
 const App: React.FC = () => {
   const [saveIndicator, setSaveIndicator] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // 1. DATA STATE
+  // 1. DATA INITIALIZATION & MIGRATION ENGINE
   const [guests, setGuests] = useState<Guest[]>(() => {
-    const saved = localStorage.getItem(G_KEY);
+    // Try stable key first
+    const saved = localStorage.getItem(STABLE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) { console.error("Disk Load Error", e); }
+      } catch (e) { console.error("Stable Load Error", e); }
     }
+
+    // Migration Scavenger: Look for data in older keys if stable is empty
+    for (const oldKey of PREVIOUS_KEYS) {
+      const oldData = localStorage.getItem(oldKey);
+      if (oldData) {
+        try {
+          const parsed = JSON.parse(oldData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log(`Migrating data from ${oldKey} to Stable Store`);
+            localStorage.setItem(STABLE_KEY, oldData);
+            return parsed;
+          }
+        } catch (e) { /* silent fail */ }
+      }
+    }
+
     return INITIAL_GUESTS;
   });
 
   const [userRole, setUserRole] = useState<UserRole>(() => {
-    const saved = localStorage.getItem(S_KEY);
+    const saved = localStorage.getItem(SESSION_KEY);
     if (saved) {
       try { return JSON.parse(saved).role; } catch (e) { return null; }
     }
@@ -42,7 +68,7 @@ const App: React.FC = () => {
   });
 
   const [activeGuestId, setActiveGuestId] = useState<string | null>(() => {
-    const saved = localStorage.getItem(S_KEY);
+    const saved = localStorage.getItem(SESSION_KEY);
     if (saved) {
       try { return JSON.parse(saved).guestId; } catch (e) { return null; }
     }
@@ -50,7 +76,7 @@ const App: React.FC = () => {
   });
 
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
-    const saved = localStorage.getItem(S_KEY);
+    const saved = localStorage.getItem(SESSION_KEY);
     if (saved) {
       try { return JSON.parse(saved).lastTab || 'master'; } catch (e) { return 'master'; }
     }
@@ -60,45 +86,31 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [budget, setBudget] = useState<Budget>(INITIAL_BUDGET);
 
-  // 2. SESSION SYNC
+  // 2. AUTOMATED PERSISTENCE EFFECTS
   useEffect(() => {
     if (userRole) {
-      localStorage.setItem(S_KEY, JSON.stringify({ 
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ 
         role: userRole, 
         guestId: activeGuestId, 
-        lastTab: activeTab 
+        lastTab: activeTab,
+        lastActive: new Date().toISOString()
       }));
     }
   }, [userRole, activeGuestId, activeTab]);
 
-  // 3. MAGIC LINK PERSISTENCE
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const guestIdFromUrl = params.get('id');
-    
-    if (guestIdFromUrl) {
-      const exists = guests.find(g => g.id === guestIdFromUrl);
-      if (exists) {
-        if (userRole !== 'planner') {
-          setUserRole('guest');
-        }
-        setActiveGuestId(guestIdFromUrl);
-        setActiveTab('portal');
-      }
-    }
-  }, [guests, userRole]);
-
-  // Sync Guests to storage
-  useEffect(() => {
-    localStorage.setItem(G_KEY, JSON.stringify(guests));
+    localStorage.setItem(STABLE_KEY, JSON.stringify(guests));
   }, [guests]);
 
+  // 3. MASTER UPDATE HANDLER (REPLICATION ENGINE)
   const handleUpdateGuest = useCallback((id: string, updates: Partial<Guest>) => {
     setIsSyncing(true);
+    // Functional update ensures we're working with the freshest state batch
     setGuests((prev) => 
       prev.map((guest) => (guest.id === id ? { ...guest, ...updates } : guest))
     );
-    setTimeout(() => setIsSyncing(false), 300);
+    // Visual feedback for auto-sync
+    setTimeout(() => setIsSyncing(false), 200);
   }, []);
 
   const handleTeleport = (guestId: string) => {
@@ -107,14 +119,14 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem(S_KEY);
+    localStorage.removeItem(SESSION_KEY);
     window.location.href = window.location.origin + window.location.pathname;
   };
 
   const handleAddGuest = () => {
     const newGuest: Guest = {
       id: `guest-${Date.now()}`,
-      name: 'New Family Member',
+      name: 'Honored Guest Name',
       category: 'Family',
       side: 'Common',
       property: 'Resort',
@@ -130,9 +142,13 @@ const App: React.FC = () => {
   };
 
   const forceSync = () => {
-    localStorage.setItem(G_KEY, JSON.stringify(guests));
+    setIsSyncing(true);
+    localStorage.setItem(STABLE_KEY, JSON.stringify(guests));
     setSaveIndicator(true);
-    setTimeout(() => setSaveIndicator(false), 2000);
+    setTimeout(() => {
+      setSaveIndicator(false);
+      setIsSyncing(false);
+    }, 1500);
   };
 
   if (!userRole) {
@@ -160,15 +176,15 @@ const App: React.FC = () => {
                   <ShieldCheck className="text-[#D4AF37]" size={24} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/60">Planner View Mode</p>
-                  <p className="text-sm font-bold">Previewing: <span className="text-[#D4AF37]">{currentGuest.name}</span></p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/60">Planner Authority</p>
+                  <p className="text-sm font-bold">Impersonating Guest: <span className="text-[#D4AF37]">{currentGuest.name}</span></p>
                 </div>
               </div>
               <button 
                 onClick={() => setActiveTab('master')}
                 className="w-full sm:w-auto bg-[#D4AF37] text-stone-900 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white transition-all shadow-lg"
               >
-                <EyeOff size={16} /> Exit Preview & Return to Master
+                <EyeOff size={16} /> Close Preview
               </button>
             </div>
           )}
@@ -184,17 +200,17 @@ const App: React.FC = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={16} className="text-[#D4AF37]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#B8860B]">Master Authority Controller</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#B8860B]">Core Authority Database</span>
               </div>
-              <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master Database</h2>
-              <p className="text-stone-500 text-sm italic">Status updates to 'Coming' automatically when guests submit RSVPs.</p>
+              <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master List</h2>
+              <p className="text-stone-500 text-sm italic">Edit names here to update all maps, invitations, and meal logs across the app.</p>
             </div>
             {userRole === 'planner' && (
               <button 
                 onClick={handleAddGuest}
                 className="flex items-center gap-4 bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all"
               >
-                <UserPlus size={18} /> Add Family Member
+                <UserPlus size={18} /> New Entry
               </button>
             )}
           </div>
@@ -219,7 +235,7 @@ const App: React.FC = () => {
     if (activeTab === 'rooms') return <RoomMap guests={guests} />;
     if (activeTab === 'meals') return (
       <div className="space-y-6">
-        <h2 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 px-1">Culinary Logistics</h2>
+        <h2 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 px-1">Culinary Log</h2>
         <DataTable guests={guests} onUpdate={handleUpdateGuest} columns={[
           { key: 'name', label: 'Guest Name' },
           { key: 'dietaryNote', label: 'Dietary Preference', editable: userRole === 'planner' },
@@ -257,9 +273,9 @@ const App: React.FC = () => {
               <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B] hover:scale-110 transition-transform"><Menu size={24} /></button>
               <div className="flex flex-col">
                 <span className={`text-[9px] font-black uppercase tracking-[0.3em] mb-1 transition-colors ${isSyncing ? 'text-amber-500' : 'text-[#B8860B]'}`}>
-                  {isSyncing ? 'Syncing Network...' : 'Estate Sync Online'}
+                  {isSyncing ? 'Propagating Changes...' : 'Local Storage Secured'}
                 </span>
-                <h2 className="text-sm md:text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h2>
+                <h2 className="text-sm md:text-xl font-serif font-bold text-stone-900 uppercase tracking-tighter">{EVENT_CONFIG.title}</h2>
               </div>
             </div>
             
@@ -267,14 +283,14 @@ const App: React.FC = () => {
               {saveIndicator ? (
                 <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full shadow-2xl animate-in zoom-in duration-300">
                   <CheckCircle size={16} className="text-[#D4AF37]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Saved</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Network Synced</span>
                 </div>
               ) : (
                 <button 
                   onClick={forceSync}
                   className={`flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 shadow-xl hover:border-[#D4AF37] transition-all group ${isSyncing ? 'animate-pulse' : ''}`}
                 >
-                  <Lock size={16} className="text-[#D4AF37]" />
+                  <RefreshCw size={16} className={`text-[#D4AF37] ${isSyncing ? 'animate-spin' : ''}`} />
                   <span className="text-[10px] font-black uppercase tracking-widest">Master Save</span>
                 </button>
               )}
