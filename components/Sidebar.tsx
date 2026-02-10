@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Users, 
@@ -14,9 +13,7 @@ import {
   Trees,
   Lock,
   MailCheck,
-  LayoutDashboard,
-  Globe,
-  Rocket
+  LayoutDashboard
 } from 'lucide-react';
 import { AppTab, UserRole } from '../types';
 import { EVENT_CONFIG } from '../constants';
@@ -42,7 +39,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
     { id: 'tree', label: 'Interactive Tree', icon: GitBranch, plannerOnly: false },
     { id: 'budget', label: 'Budget Tracker', icon: IndianRupee, plannerOnly: true },
     { id: 'ai', label: 'AI Assistant', icon: Sparkles, plannerOnly: true },
-    { id: 'deployment', label: 'Go Live (GitHub)', icon: Rocket, plannerOnly: true },
   ];
 
   return (
@@ -72,7 +68,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
             const isActive = activeTab === item.id;
             const isLocked = item.plannerOnly && role !== 'planner';
             
-            // Filter logic: guestOnly items only show for guests, others show for both unless plannerOnly
             if (item.guestOnly && role !== 'guest') return null;
 
             return (

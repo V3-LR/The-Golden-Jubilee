@@ -1,10 +1,8 @@
-
 import React, { useState } from 'react';
 import { Guest, UserRole } from '../types';
-import { EVENT_CONFIG } from '../constants';
 import { 
-  Copy, CheckCircle, Clock, Eye, X, Camera, Heart, Sun, Zap, 
-  MessageCircle, Share2, ClipboardCheck, ArrowRight, Plane
+  CheckCircle, Clock, Eye, X, Camera, Heart, Sun, Zap, 
+  MessageCircle, Share2, ClipboardCheck, Link as LinkIcon
 } from 'lucide-react';
 
 interface RSVPManagerProps {
@@ -17,11 +15,20 @@ interface RSVPManagerProps {
 const RSVPManager: React.FC<RSVPManagerProps> = ({ guests, onUpdate, role, onTeleport }) => {
   const [selectedForCard, setSelectedForCard] = useState<Guest | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
   const confirmed = guests.filter(g => g.status === 'Confirmed');
   const totalPax = confirmed.reduce((acc, curr) => acc + (curr.paxCount || 1), 0);
 
+  const copyMagicLink = (guest: Guest) => {
+    const url = `${window.location.origin}${window.location.pathname}?id=${guest.id}`;
+    navigator.clipboard.writeText(url);
+    setCopiedLinkId(guest.id);
+    setTimeout(() => setCopiedLinkId(null), 2000);
+  };
+
   const generateWhatsAppMessage = (guest: Guest) => {
+    const magicLink = `${window.location.origin}${window.location.pathname}?id=${guest.id}`;
     const text = `*Pranam ${guest.name} Ji!* 🙏
 
 You are cordially invited to the *Golden Jubilee* of Mummy & Papa in Goa! 🌴✨
@@ -29,23 +36,16 @@ You are cordially invited to the *Golden Jubilee* of Mummy & Papa in Goa! 🌴�
 *Stay Details:*
 Property: ${guest.property}
 Room: #${guest.roomNo}
-Meal Plan: ${guest.mealPlan.lunch17}
 
-*Itinerary Highlights:*
-- Welcome Sundowner: April 17, 5 PM
-- Golden Gala Dinner: April 18, 7:30 PM
+*View Your Personal Invitation & RSVP:*
+${magicLink}
 
-*RSVP Verification:*
-We have you marked as: *${guest.status}*
-
-*Warm regards,*
-The Family`;
+Hum aapke aagman ki pratiksha karenge! 🧡`;
 
     navigator.clipboard.writeText(text);
     setCopiedId(guest.id);
     setTimeout(() => setCopiedId(null), 3000);
     
-    // Also try to open WhatsApp if possible
     const encodedText = encodeURIComponent(text);
     window.open(`https://wa.me/?text=${encodedText}`, '_blank');
   };
@@ -78,9 +78,9 @@ The Family`;
               <Share2 size={32} />
            </div>
            <div className="flex-grow space-y-3 text-center md:text-left">
-              <h4 className="text-2xl font-serif font-bold text-stone-900 tracking-tight">The Sharing Solution</h4>
+              <h4 className="text-2xl font-serif font-bold text-stone-900 tracking-tight">Personalized Magic Links</h4>
               <p className="text-stone-600 text-base leading-relaxed max-w-2xl font-medium">
-                Because external links are temporary, use the <span className="text-[#B8860B] font-black uppercase mx-1">WHATSAPP</span> button to send a formal text invite, or <span className="text-[#B8860B] font-black uppercase mx-1">GENERATE CARD</span> to create a beautiful image for a screenshot.
+                Copy a guest's <span className="text-[#B8860B] font-black uppercase mx-1">MAGIC LINK</span> to send them directly to their private dashboard. Use <span className="text-[#B8860B] font-black uppercase mx-1">GENERATE CARD</span> for a visual invitation.
               </p>
            </div>
         </div>
@@ -120,23 +120,37 @@ The Family`;
                     <div className="flex items-center justify-end gap-3">
                       <button 
                         onClick={() => setSelectedForCard(guest)}
-                        className="flex items-center gap-2 px-6 py-4 bg-stone-900 text-[#D4AF37] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
+                        className="flex items-center gap-2 px-4 py-4 bg-stone-900 text-[#D4AF37] rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
+                        title="Visual Patrikaa"
                       >
-                        <Camera size={14} /> Generate Card
+                        <Camera size={14} /> Card
                       </button>
+                      
+                      <button 
+                        onClick={() => copyMagicLink(guest)}
+                        className={`flex items-center gap-2 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                          copiedLinkId === guest.id ? 'bg-[#D4AF37] text-stone-900 border-[#D4AF37]' : 'bg-white text-stone-500 border-stone-100 hover:border-[#D4AF37]'
+                        }`}
+                        title="Copy Guest URL"
+                      >
+                        {copiedLinkId === guest.id ? <CheckCircle size={14} /> : <LinkIcon size={14} />}
+                        {copiedLinkId === guest.id ? 'Linked' : 'Link'}
+                      </button>
+
                       <button 
                         onClick={() => generateWhatsAppMessage(guest)}
-                        className={`flex items-center gap-2 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${
+                        className={`flex items-center gap-2 px-6 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border shadow-sm ${
                           copiedId === guest.id ? 'bg-green-500 text-white border-green-500' : 'bg-white text-green-600 border-green-100 hover:border-green-300'
                         }`}
                       >
                         {copiedId === guest.id ? <ClipboardCheck size={14} /> : <MessageCircle size={14} />}
-                        {copiedId === guest.id ? 'Text Copied' : 'WhatsApp Text'}
+                        {copiedId === guest.id ? 'Sent' : 'WhatsApp'}
                       </button>
+
                       <button 
                         onClick={() => onTeleport(guest.id)}
                         className="p-4 bg-stone-50 border border-stone-100 text-stone-300 rounded-2xl hover:text-[#B8860B] hover:border-[#D4AF37] transition-all"
-                        title="Simulate Mobile View"
+                        title="Simulation View"
                       >
                         <Eye size={18} />
                       </button>
@@ -151,15 +165,17 @@ The Family`;
 
       {/* Digital Invitation Card Generator Modal */}
       {selectedForCard && (
-        <div className="fixed inset-0 bg-stone-900/98 z-[200] flex items-center justify-center p-4 overflow-y-auto no-scrollbar">
-          <div className="max-w-md w-full relative py-20">
-            <button 
-              onClick={() => setSelectedForCard(null)}
-              className="absolute top-10 right-0 text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.4em] hover:text-[#D4AF37] transition-colors"
-            >
-              <X size={24} /> Close Designer
-            </button>
+        <div className="fixed inset-0 bg-stone-900/98 z-[200] flex items-center justify-center p-4 overflow-y-auto">
+          {/* FIXED CLOSE BUTTON */}
+          <button 
+            onClick={() => setSelectedForCard(null)}
+            className="fixed top-8 right-8 z-[210] bg-white/10 hover:bg-[#D4AF37] text-white hover:text-stone-900 p-4 rounded-full transition-all shadow-2xl backdrop-blur-xl border border-white/20 flex items-center gap-3 group"
+          >
+            <span className="text-[10px] font-black uppercase tracking-widest hidden md:block">Close Designer</span>
+            <X size={24} />
+          </button>
 
+          <div className="max-w-md w-full relative py-12 md:py-20">
             {/* THE PATRIKAA (Invitation Card) */}
             <div className="bg-white rounded-[4rem] overflow-hidden shadow-[0_0_120px_rgba(212,175,55,0.4)] border-8 border-white animate-in zoom-in duration-500">
                {/* Hero Section */}

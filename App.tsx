@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Guest, AppTab, Budget, UserRole } from './types';
 import { INITIAL_GUESTS, INITIAL_BUDGET, EVENT_CONFIG } from './constants';
 import Sidebar from './components/Sidebar';
@@ -10,10 +10,9 @@ import VenueOverview from './components/VenueOverview';
 import RoomMap from './components/RoomMap';
 import Login from './components/Login';
 import RSVPManager from './components/RSVPManager';
-import RSVPForm from './components/RSVPForm';
 import GuestPortal from './components/GuestPortal';
 import DeploymentHub from './components/DeploymentHub';
-import { Menu, Save, UserPlus, RefreshCw, ShieldCheck, Lock } from 'lucide-react';
+import { Menu, RefreshCw, ShieldCheck, Lock, UserPlus } from 'lucide-react';
 
 const STORAGE_ID = 'GOLDEN_JUBILEE_V10_PRO';
 const G_KEY = `${STORAGE_ID}_GUESTS`;
@@ -23,7 +22,7 @@ const App: React.FC = () => {
   const [saveIndicator, setSaveIndicator] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // 1. MASTER DATA: The single source of truth for the entire estate
+  // 1. MASTER DATA: The single source of truth
   const [guests, setGuests] = useState<Guest[]>(() => {
     const saved = localStorage.getItem(G_KEY);
     if (saved) {
@@ -55,7 +54,26 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [budget, setBudget] = useState<Budget>(INITIAL_BUDGET);
 
-  // 2. AUTO-SYNC: Ensures that updates to names like "Grandpa" persist instantly
+  // 2. URL MAGIC LINK DETECTION: Auto-login via ?id=guest-1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const guestIdFromUrl = params.get('id');
+    
+    if (guestIdFromUrl) {
+      const exists = guests.find(g => g.id === guestIdFromUrl);
+      if (exists) {
+        setPersistedGuestId(guestIdFromUrl);
+        setUserRole('guest');
+        setActiveTab('portal');
+        const session = { role: 'guest', guestId: guestIdFromUrl };
+        localStorage.setItem(S_KEY, JSON.stringify(session));
+        // Clean URL to keep it pretty
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [guests]);
+
+  // Sync to local storage on every change
   useEffect(() => {
     localStorage.setItem(G_KEY, JSON.stringify(guests));
   }, [guests]);
@@ -79,7 +97,6 @@ const App: React.FC = () => {
     setUserRole('guest');
     setActiveTab('portal');
     persistSession('guest', guestId);
-    window.history.replaceState({}, '', window.location.pathname);
   };
 
   const handleUpdateGuest = useCallback((id: string, updates: Partial<Guest>) => {
@@ -87,7 +104,6 @@ const App: React.FC = () => {
     setGuests((prev) => 
       prev.map((guest) => (guest.id === id ? { ...guest, ...updates } : guest))
     );
-    // Subtle delay to show the sync happened
     setTimeout(() => setIsSyncing(false), 800);
   }, []);
 
@@ -123,7 +139,6 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    // Ensuring the Guest Portal always reflects the latest Master Name
     const currentGuest = guests.find(g => g.id === persistedGuestId) || guests[0]; 
 
     if (activeTab === 'portal') return <GuestPortal guest={currentGuest} />;
