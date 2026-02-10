@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Budget, Guest, Quotation } from '../types';
 import { QUOTATIONS } from '../constants';
@@ -28,7 +27,9 @@ import {
   Lock,
   Unlock,
   Sun,
-  Trees
+  Trees,
+  ArrowRightLeft,
+  Medal
 } from 'lucide-react';
 
 interface BudgetTrackerProps {
@@ -81,6 +82,18 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ budget, guests, onUpdateB
     { key: 'bartenderRate', label: "Bar Tender", value: budget.bartenderRate, icon: Wine, detail: "Service Fee", editKey: 'bartenderRate' },
     { key: 'accessoriesRate', label: "Accessories", value: budget.accessoriesRate, icon: Sparkles, detail: "Props", editKey: 'accessoriesRate' }
   ];
+
+  // Logic to find lowest prices across vendors
+  const getMinPrice = (key: 'breakfast' | 'lunch' | 'dinner' | 'galaDinner') => {
+    return Math.min(...QUOTATIONS.map(q => q[key]));
+  };
+
+  const minPrices = {
+    breakfast: getMinPrice('breakfast'),
+    lunch: getMinPrice('lunch'),
+    dinner: getMinPrice('dinner'),
+    galaDinner: getMinPrice('galaDinner'),
+  };
 
   return (
     <div className="space-y-8 md:space-y-10 pb-12 md:pb-20 animate-in fade-in duration-700">
@@ -207,6 +220,59 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ budget, guests, onUpdateB
                 </a>
               </div>
 
+              {/* Comparative Analysis Section */}
+              <div className="pt-6 border-t border-white/5">
+                <div className="flex items-center gap-3 mb-6">
+                  <ArrowRightLeft className="text-[#D4AF37]" size={20} />
+                  <h4 className="text-xl font-serif font-bold text-white">Market Rate Comparison</h4>
+                </div>
+                
+                <div className="bg-black/40 rounded-3xl overflow-hidden border border-white/5">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-white/5">
+                        <th className="px-6 py-4 text-[9px] font-black text-stone-500 uppercase tracking-widest">Meal Type (Per Pax)</th>
+                        {QUOTATIONS.map(q => (
+                          <th key={q.vendorName} className="px-6 py-4 text-[9px] font-black text-[#D4AF37] uppercase tracking-widest text-right">
+                            {q.vendorName.split(' ')[0]}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {[
+                        { label: 'Breakfast', key: 'breakfast' as const },
+                        { label: 'Standard Lunch', key: 'lunch' as const },
+                        { label: 'Estate Dinner', key: 'dinner' as const },
+                        { label: 'Gala Jubilee Dinner', key: 'galaDinner' as const },
+                      ].map((row) => (
+                        <tr key={row.key} className="group hover:bg-white/[0.02]">
+                          <td className="px-6 py-5 text-xs font-bold text-stone-300">{row.label}</td>
+                          {QUOTATIONS.map(q => {
+                            const isMin = q[row.key] === minPrices[row.key];
+                            return (
+                              <td key={q.vendorName} className="px-6 py-5 text-right">
+                                <div className="flex flex-col items-end">
+                                  <span className={`text-sm font-black ${isMin ? 'text-green-400' : 'text-white'}`}>
+                                    ₹{q[row.key].toLocaleString()}
+                                  </span>
+                                  {isMin && (
+                                    <span className="text-[7px] font-black text-green-500 uppercase tracking-tighter mt-1 flex items-center gap-0.5">
+                                      <Medal size={8} /> Best Value
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-4 text-[9px] text-stone-500 italic">Values highlighted in green represent the most cost-effective heritage option available.</p>
+              </div>
+
               <div>
                 <span className="text-[#D4AF37] font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] mb-4 md:mb-6 block">Menu Highlights</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
@@ -220,7 +286,7 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ budget, guests, onUpdateB
               </div>
             </div>
 
-            <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] p-6 md:p-12 shadow-inner flex flex-col justify-between">
+            <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] p-6 md:p-12 shadow-inner flex flex-col justify-between h-fit lg:sticky lg:top-10">
               <div>
                 <h4 className="text-xl md:text-3xl font-serif font-bold text-stone-900 mb-6 md:mb-10">Jubilee Numbers</h4>
 
@@ -257,6 +323,7 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ budget, guests, onUpdateB
                       { l: 'Boutique Breakfast (2d)', v: catering.breakfastTotal },
                       { l: 'Goan Coastal Lunch (2d)', v: catering.lunchTotal },
                       { l: 'Estate Standard Dinner', v: catering.dinnerTotal },
+                      { l: 'Gala Jubilee Dinner', v: catering.galaTotal },
                     ].map((row, i) => (
                       <div key={i} className="flex justify-between items-center text-xs">
                         <span className="text-stone-500 font-medium">{row.l}</span>
