@@ -14,17 +14,17 @@ import RSVPManager from './components/RSVPManager';
 import RSVPForm from './components/RSVPForm';
 import GuestPortal from './components/GuestPortal';
 import DeploymentHub from './components/DeploymentHub';
-import { Menu, Save, UserPlus, RefreshCw, ShieldCheck, Lock } from 'lucide-react';
+import { Menu, Save, UserPlus, RefreshCw, ShieldCheck, Lock, CloudSync } from 'lucide-react';
 
-// V9: THE SOCIAL SHARING SUITE - HARD STORAGE
-const STORAGE_ID = 'GOLDEN_JUBILEE_V9_PRO';
+const STORAGE_ID = 'GOLDEN_JUBILEE_V10_PRO';
 const G_KEY = `${STORAGE_ID}_GUESTS`;
 const S_KEY = `${STORAGE_ID}_SESSION`;
 
 const App: React.FC = () => {
   const [saveIndicator, setSaveIndicator] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // 1. ATOMIC LOAD: Ensure custom names like "Grandpa" take absolute priority
+  // 1. MASTER DATA: The single source of truth for the entire estate
   const [guests, setGuests] = useState<Guest[]>(() => {
     const saved = localStorage.getItem(G_KEY);
     if (saved) {
@@ -56,16 +56,10 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [budget, setBudget] = useState<Budget>(INITIAL_BUDGET);
 
-  // 2. AUTO-SYNC: Save every change immediately to prevent resets
+  // 2. AUTO-SYNC: Ensures that updates to names like "Grandpa" persist instantly
   useEffect(() => {
     localStorage.setItem(G_KEY, JSON.stringify(guests));
   }, [guests]);
-
-  // Handle Tab changes based on role
-  useEffect(() => {
-    if (userRole === 'guest') setActiveTab('portal');
-    else if (userRole === 'planner' && activeTab === 'portal') setActiveTab('master');
-  }, [userRole]);
 
   const persistSession = (role: UserRole, guestId?: string) => {
     const session = { role, guestId: guestId || persistedGuestId };
@@ -86,20 +80,22 @@ const App: React.FC = () => {
     setUserRole('guest');
     setActiveTab('portal');
     persistSession('guest', guestId);
-    // Remove query params to prevent reload loops
     window.history.replaceState({}, '', window.location.pathname);
   };
 
   const handleUpdateGuest = useCallback((id: string, updates: Partial<Guest>) => {
+    setIsSyncing(true);
     setGuests((prev) => 
       prev.map((guest) => (guest.id === id ? { ...guest, ...updates } : guest))
     );
+    // Subtle delay to show the sync happened
+    setTimeout(() => setIsSyncing(false), 800);
   }, []);
 
   const handleAddGuest = () => {
     const newGuest: Guest = {
       id: `guest-${Date.now()}`,
-      name: 'Enter Honored Name...',
+      name: 'Enter New Name...',
       category: 'Family',
       side: 'Common',
       property: 'Resort',
@@ -128,7 +124,7 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    // SINGLE SOURCE OF TRUTH: Always pull the current guest from the master state
+    // Ensuring the Guest Portal always reflects the latest Master Name
     const currentGuest = guests.find(g => g.id === persistedGuestId) || guests[0]; 
 
     if (activeTab === 'portal') return <GuestPortal guest={currentGuest} />;
@@ -138,15 +134,19 @@ const App: React.FC = () => {
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
             <div>
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldCheck size={16} className="text-[#D4AF37]" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#B8860B]">Master Authority Controller</span>
+              </div>
               <h2 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 leading-tight">Master Database</h2>
-              <p className="text-stone-500 text-sm italic">Edit 'Grandpa' here. Changes reflect in Room Maps, Meals, and Portals instantly.</p>
+              <p className="text-stone-500 text-sm italic mt-2">Any edit to 'Name' here propagates instantly to Room Maps and Portals.</p>
             </div>
             {userRole === 'planner' && (
               <button 
                 onClick={handleAddGuest}
                 className="flex items-center gap-3 bg-[#D4AF37] text-stone-900 px-8 py-4 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:scale-105 transition-all"
               >
-                <UserPlus size={18} /> New Entry
+                <UserPlus size={18} /> Add Family Member
               </button>
             )}
           </div>
@@ -158,7 +158,7 @@ const App: React.FC = () => {
               { key: 'side', label: 'Side', editable: userRole === 'planner', type: 'select', options: ['Ladkiwale', 'Ladkewale', 'Common'] },
               { key: 'property', label: 'Stay', editable: userRole === 'planner', type: 'select', options: ['Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] },
               { key: 'roomNo', label: 'Room #', editable: userRole === 'planner' },
-              { key: 'status', label: 'RSVP', editable: userRole === 'planner', type: 'select', options: ['Confirmed', 'Pending', 'Declined'] },
+              { key: 'status', label: 'RSVP Status', editable: userRole === 'planner', type: 'select', options: ['Confirmed', 'Pending', 'Declined'] },
             ]}
           />
         </div>
@@ -170,10 +170,12 @@ const App: React.FC = () => {
     if (activeTab === 'meals') return (
       <div className="space-y-6">
         <h2 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 px-1">Culinary Logistics</h2>
+        <p className="text-stone-400 text-sm italic mb-4">Names are synced from the Master List to prevent dietary mixups.</p>
         <DataTable guests={guests} onUpdate={handleUpdateGuest} columns={[
           { key: 'name', label: 'Guest Name' },
           { key: 'dietaryNote', label: 'Dietary Preference', editable: userRole === 'planner' },
           { key: 'roomNo', label: 'Room' },
+          { key: 'property', label: 'Property' },
         ]} />
       </div>
     );
@@ -182,7 +184,7 @@ const App: React.FC = () => {
     if (activeTab === 'ai') return <AIPlanner guests={guests} />;
     if (activeTab === 'deployment') return <DeploymentHub />;
 
-    return <div className="p-20 text-center font-serif text-stone-400">Loading...</div>;
+    return <div className="p-20 text-center font-serif text-stone-400">Loading Estate Data...</div>;
   };
 
   return (
@@ -201,7 +203,9 @@ const App: React.FC = () => {
           <div className="flex items-center gap-4">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={20} /></button>
             <div className="flex flex-col">
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#B8860B] mb-1">Estate Sync Active</span>
+              <span className={`text-[9px] font-black uppercase tracking-[0.3em] mb-1 transition-colors ${isSyncing ? 'text-amber-500' : 'text-[#B8860B]'}`}>
+                {isSyncing ? 'Syncing Network...' : 'Estate Sync Active'}
+              </span>
               <h2 className="text-sm md:text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h2>
             </div>
           </div>
@@ -210,12 +214,12 @@ const App: React.FC = () => {
             {saveIndicator ? (
               <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full shadow-2xl animate-in zoom-in">
                 <ShieldCheck size={16} className="text-[#D4AF37]" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Locked to Disk</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Saved to Cloud</span>
               </div>
             ) : (
               <button 
                 onClick={forceSync}
-                className="flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 shadow-xl hover:border-[#D4AF37] transition-all group"
+                className={`flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 shadow-xl hover:border-[#D4AF37] transition-all group ${isSyncing ? 'animate-pulse' : ''}`}
               >
                 <Lock size={16} className="text-[#D4AF37]" />
                 <span className="text-[10px] font-black uppercase tracking-widest">Global Master Save</span>
