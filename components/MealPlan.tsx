@@ -1,97 +1,105 @@
 import React from 'react';
-import { Guest } from '../types';
-import { Utensils, Coffee, Sun, Moon, Info, CheckCircle, Edit3 } from 'lucide-react';
+import { Guest, Budget } from '../types';
+import { Utensils, Coffee, Sun, Moon, Beer, GlassWater, Wine, Package } from 'lucide-react';
 
 interface MealPlanProps {
   guests: Guest[];
+  budget: Budget;
   onUpdate: (id: string, updates: Partial<Guest>) => void;
   isPlanner: boolean;
 }
 
-const MealPlan: React.FC<MealPlanProps> = ({ guests, onUpdate, isPlanner }) => {
-  const confirmedCount = guests.filter(g => g.status === 'Confirmed').length;
+const MealPlan: React.FC<MealPlanProps> = ({ guests, budget, onUpdate, isPlanner }) => {
+  const confirmedGuests = guests.filter(g => g.status === 'Confirmed');
+  const breakdown = budget.cateringBreakdown || {
+    lunch17: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 },
+    dinner17: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 },
+    lunch18: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 },
+    gala18: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 }
+  };
+
+  const mealLabels = {
+    lunch17: { label: 'Arrival Lunch', icon: Coffee, date: 'April 17' },
+    dinner17: { label: 'Sangeet Dinner', icon: Moon, date: 'April 17' },
+    lunch18: { label: 'Anniversary Lunch', icon: Sun, date: 'April 18' },
+    gala18: { label: 'Golden Gala', icon: Utensils, date: 'April 18' }
+  };
+
+  const bar = budget.barInventory || { urakLitres: 0, beerCases: 0, mixersCrates: 0 };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
-        <div>
-          <h2 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 leading-tight">Catering <br/><span className="text-[#B8860B]">Logistics</span></h2>
-          <p className="text-stone-500 italic text-sm md:text-lg mt-2">Managing the culinary journey for {confirmedCount} confirmed Pax.</p>
-        </div>
-        <div className="bg-stone-900 text-white px-8 py-5 rounded-[2rem] border-2 border-[#D4AF37] shadow-xl text-center">
-          <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Confirmed Pax</p>
-          <p className="text-3xl font-serif font-bold text-[#D4AF37]">{confirmedCount}</p>
-        </div>
+    <div className="space-y-16 pb-32 animate-in fade-in duration-700">
+      <div className="px-1">
+        <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight tracking-tight">Catering <br/><span className="text-[#B8860B]">Manifest</span></h2>
+        <p className="text-stone-500 text-lg italic mt-3">Production totals for {confirmedGuests.length} confirmed guests.</p>
       </div>
 
-      <div className="bg-white rounded-[3rem] border border-stone-100 shadow-2xl overflow-hidden">
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead className="bg-[#FCFAF2] text-stone-500 text-[10px] uppercase tracking-[0.25em] font-black">
-              <tr>
-                <th className="px-10 py-8">Guest Name</th>
-                <th className="px-10 py-8">Dietary Requirement</th>
-                <th className="px-10 py-8">April 17 Dinner</th>
-                <th className="px-10 py-8">April 18 Gala</th>
-                <th className="px-10 py-8">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-50">
-              {guests.map((guest) => (
-                <tr key={guest.id} className="hover:bg-stone-50/50 transition-all group">
-                  <td className="px-10 py-6">
-                    <div className="flex flex-col">
-                      <span className="text-lg font-bold text-stone-900 group-hover:text-[#B8860B] transition-colors">{guest.name}</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-stone-400">{guest.side} Side</span>
-                    </div>
-                  </td>
-                  <td className="px-10 py-6">
-                    {isPlanner ? (
-                      <input 
-                        className="bg-stone-100/50 border-2 border-transparent hover:border-[#D4AF37]/30 focus:border-[#D4AF37] rounded-xl px-4 py-2 text-xs font-bold text-stone-800 outline-none w-full transition-all"
-                        value={guest.dietaryNote}
-                        onChange={(e) => onUpdate(guest.id, { dietaryNote: e.target.value })}
-                      />
-                    ) : (
-                      <span className="text-sm font-bold text-stone-600">{guest.dietaryNote || 'Standard Veg'}</span>
-                    )}
-                  </td>
-                  <td className="px-10 py-6">
-                    <div className="flex items-center gap-3">
-                      <Moon size={14} className="text-stone-300" />
-                      <span className="text-xs font-bold text-stone-800 italic">{guest.mealPlan.lunch17}</span>
-                    </div>
-                  </td>
-                  <td className="px-10 py-6">
-                    <div className="flex items-center gap-3">
-                      <Sun size={14} className="text-[#D4AF37]" />
-                      <span className="text-xs font-bold text-stone-800">{guest.mealPlan.dinner18}</span>
-                    </div>
-                  </td>
-                  <td className="px-10 py-6">
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border ${
-                      guest.status === 'Confirmed' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-stone-100 text-stone-400 border-stone-200'
-                    }`}>
-                      {guest.status === 'Confirmed' ? 'Included' : 'Pending'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Bar Inventory Section */}
+      <section className="space-y-8">
+         <div className="flex items-center gap-4 border-b border-stone-100 pb-6">
+            <Beer className="text-[#D4AF37]" size={32} />
+            <h3 className="text-3xl font-serif font-bold text-stone-900">Welcome Bar Station</h3>
+         </div>
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+               { icon: Wine, label: 'Urak (Fresh Litres)', val: bar.urakLitres, desc: 'Calculated from preferences' },
+               { icon: Beer, label: 'Beer (Pint Cases)', val: bar.beerCases, desc: '8-10 cases recommended' },
+               { icon: GlassWater, label: 'Mixers & Soda', val: bar.mixersCrates, desc: 'Small glass bottles' }
+            ].map((item, i) => (
+               <div key={i} className="bg-white p-10 rounded-[3rem] border border-stone-100 shadow-xl flex flex-col items-center text-center space-y-4">
+                  <div className="w-14 h-14 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-900 shadow-sm">
+                     <item.icon size={28} />
+                  </div>
+                  <div>
+                     <p className="text-3xl font-serif font-bold text-stone-900">{item.val}</p>
+                     <p className="text-[10px] font-black uppercase text-stone-400 tracking-widest">{item.label}</p>
+                  </div>
+                  <p className="text-[9px] text-stone-300 italic uppercase font-bold tracking-tighter">{item.desc}</p>
+               </div>
+            ))}
+         </div>
+      </section>
 
-      <div className="bg-[#FEF9E7] p-8 md:p-12 rounded-[3rem] border border-[#D4AF37]/30 flex flex-col md:flex-row items-center gap-8 shadow-lg">
-        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-[#D4AF37] shadow-xl shrink-0">
-          <Info size={36} />
-        </div>
-        <div>
-          <h4 className="text-2xl font-serif font-bold text-stone-900 mb-2 tracking-tight">Catering Summary</h4>
-          <p className="text-stone-600 leading-relaxed italic text-sm md:text-base">
-            "All dietary restrictions edited here are synced with the Master List and will be shared with the Chef. Total of {guests.filter(g => g.dietaryNote.toLowerCase().includes('vegan')).length} Vegan and {guests.filter(g => g.dietaryNote.toLowerCase().includes('jain')).length} Jain meals noted."
-          </p>
-        </div>
+      {/* Meal Production Totals */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {(Object.keys(mealLabels) as Array<keyof typeof mealLabels>).map((mealKey) => {
+          const config = mealLabels[mealKey];
+          const stats = breakdown[mealKey];
+          const Icon = config.icon;
+
+          return (
+            <div key={mealKey} className="bg-white p-8 rounded-[3.5rem] border border-stone-100 shadow-xl space-y-6 relative overflow-hidden group hover:border-[#D4AF37]/30 transition-all">
+              <div className="flex items-center justify-between border-b border-stone-50 pb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-[#FEF9E7] rounded-2xl flex items-center justify-center text-[#B8860B] shadow-sm">
+                    <Icon size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-serif font-bold text-stone-900">{config.label}</h3>
+                    <p className="text-[9px] font-black uppercase text-stone-400 tracking-widest">{config.date}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                   <p className="text-[9px] font-black uppercase text-stone-400 mb-1">Total Plates</p>
+                   <p className="text-xl font-bold text-stone-900">{stats.adultVeg + stats.kidVeg + stats.adultNonVeg + stats.kidNonVeg}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-green-50/50 p-6 rounded-[2.5rem] border border-green-100/50 text-center">
+                  <p className="text-[10px] font-black uppercase text-green-700 mb-2">Pure Veg</p>
+                  <p className="text-3xl font-serif font-bold text-stone-900">{stats.adultVeg + stats.kidVeg}</p>
+                  <p className="text-[8px] text-stone-400 mt-1 uppercase font-bold">{stats.adultVeg} Adult + {stats.kidVeg} Kid</p>
+                </div>
+                <div className="bg-red-50/30 p-6 rounded-[2.5rem] border border-red-50 text-center">
+                  <p className="text-[10px] font-black uppercase text-red-700 mb-2">Non-Veg</p>
+                  <p className="text-3xl font-serif font-bold text-stone-900">{stats.adultNonVeg + stats.kidNonVeg}</p>
+                  <p className="text-[8px] text-red-400 mt-1 uppercase font-bold">{stats.adultNonVeg} Adult + {stats.kidNonVeg} Kid</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

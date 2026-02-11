@@ -3,6 +3,8 @@ export type UserRole = 'planner' | 'guest' | null;
 export type FamilySide = 'Ladkiwale' | 'Ladkewale' | 'Common';
 export type TaskOwner = 'Husband' | 'Brother' | 'Planner' | 'TBD';
 export type EffortLevel = 'Low' | 'Medium' | 'High';
+export type DietaryPreference = 'Veg' | 'Non-Veg';
+export type WelcomeDrink = 'Goan Urak' | 'Chilled Beer' | 'Soft Beverage';
 
 export interface EventFunction {
   id: string;
@@ -19,6 +21,15 @@ export interface FamilyMember {
   name: string;
   age: number;
   relation: string;
+  type: 'Adult' | 'Kid';
+  dietaryPreference: DietaryPreference;
+  welcomeDrinkPreference?: WelcomeDrink;
+  mealPlan?: {
+    lunch17: DietaryPreference;
+    dinner17: DietaryPreference;
+    lunch18: DietaryPreference;
+    gala18: DietaryPreference;
+  };
 }
 
 export interface Guest {
@@ -29,13 +40,17 @@ export interface Guest {
   property: PropertyType;
   roomNo: string;
   dietaryNote: string;
+  dietaryPreference?: DietaryPreference;
+  welcomeDrinkPreference?: WelcomeDrink;
   sangeetAct: string;
   pickupScheduled: boolean;
   status: 'Confirmed' | 'Pending' | 'Declined';
   dressCode: string;
   mealPlan: {
-    lunch17: string;
-    dinner18: string;
+    lunch17: DietaryPreference | string;
+    dinner17: DietaryPreference | string;
+    lunch18: DietaryPreference | string;
+    gala18: DietaryPreference | string;
   };
   paxCount?: number;
   familyMembers?: FamilyMember[];
@@ -68,6 +83,23 @@ export interface BudgetItem {
   lead: TaskOwner;
 }
 
+export interface EventCatering {
+  adultVeg: number;
+  adultNonVeg: number;
+  kidVeg: number;
+  kidNonVeg: number;
+}
+
+export interface InventoryItem {
+  id: string;
+  label: string;
+  quantity: number;
+  unit: string;
+  source: string;
+  cost: number;
+  isPurchased: boolean;
+}
+
 export interface Budget {
   totalBudget: number;
   villaRate: number;
@@ -80,6 +112,19 @@ export interface Budget {
   bartenderRate: number;
   accessoriesRate: number;
   finalCateringPax: number;
+  finalCateringKidsPax: number;
+  barInventory?: {
+    urakLitres: number;
+    beerCases: number;
+    mixersCrates: number;
+  };
+  customInventory?: InventoryItem[];
+  cateringBreakdown?: {
+    lunch17: EventCatering;
+    dinner17: EventCatering;
+    lunch18: EventCatering;
+    gala18: EventCatering;
+  };
   finalizedVendors: string[];
   committedSpend: number;
   wishlistItems: BudgetItem[];

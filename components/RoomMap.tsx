@@ -47,6 +47,25 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
     }, 10);
   };
 
+  const getOccupancyInfo = (room: RoomDetail) => {
+    const assignedGuests = guests.filter(g => g.roomNo === room.roomNo && g.property === room.property && g.status === 'Confirmed');
+    
+    let adultCount = 0;
+    let kidCount = 0;
+    
+    assignedGuests.forEach(g => {
+      // Primary guest is adult
+      adultCount += 1; 
+      g.familyMembers?.forEach(f => {
+        if (f.age < 11) kidCount += 1;
+        else adultCount += 1;
+      });
+    });
+    
+    // Occupancy limit (usually 2 adults per room) excludes kids
+    return { adultCount, kidCount, total: adultCount + kidCount, isFull: adultCount >= 2 };
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <input 
@@ -60,7 +79,7 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div className="px-1">
           <h2 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 leading-tight">Property <br/><span className="text-[#B8860B]">Occupancy</span></h2>
-          <p className="text-stone-500 italic text-sm md:text-lg mt-2">Allocating {rooms.length} Heritage Rooms across the Goan Estate.</p>
+          <p className="text-stone-500 italic text-sm md:text-lg mt-2">Allocating {rooms.length} Heritage Rooms. (Kids &lt; 11 stay with parents and don't affect room count).</p>
         </div>
         <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200 overflow-x-auto max-w-full no-scrollbar">
           {(['All', 'Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] as const).map((prop) => (
@@ -79,8 +98,7 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-10">
         {filteredRooms.map((room) => {
-          const occupants = guests.filter(g => g.roomNo === room.roomNo && g.property === room.property);
-          const isFull = occupants.length >= 2;
+          const { adultCount, kidCount, isFull } = getOccupancyInfo(room);
           const Icon = propertyIcons[room.property];
           
           return (
@@ -109,13 +127,8 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-stone-400">
                       <Users size={14} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{occupants.length} / 2 Occupied</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">{adultCount} / 2 Adults {kidCount > 0 ? `+ ${kidCount} Kids` : ''}</span>
                     </div>
-                    {occupants.length > 0 && (
-                       <p className="text-[10px] font-bold text-stone-900 truncate max-w-[120px]">
-                         {occupants.map(o => o.name.split(' ')[0]).join(' & ')}
-                       </p>
-                    )}
                   </div>
                   {isFull ? <CheckCircle2 size={20} className="text-green-500" /> : <Circle size={20} className="text-stone-100" />}
                 </div>
@@ -132,7 +145,7 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
               <img src={selectedRoom.image} className="w-full h-full object-cover" alt={selectedRoom.title} />
               <div className="absolute inset-0 bg-gradient-to-t from-stone-900/40 to-transparent"></div>
             </div>
-            <div className="lg:w-1/2 p-10 md:p-20 flex flex-col justify-center">
+            <div className="lg:w-2/5 p-10 md:p-20 flex flex-col justify-center">
               <span className="text-[#B8860B] font-black text-[10px] uppercase tracking-[0.5em] mb-4">Detailed View</span>
               <h3 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 mb-8 leading-tight">{selectedRoom.title}</h3>
               <div className="space-y-10">
@@ -140,9 +153,20 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
                   <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-6">Honored Residents</h4>
                   <div className="space-y-3">
                     {guests.filter(g => g.roomNo === selectedRoom.roomNo && g.property === selectedRoom.property).map(g => (
-                      <div key={g.id} className="flex items-center gap-4 p-5 bg-stone-50 rounded-2xl border border-stone-100 font-black text-stone-900 uppercase tracking-widest text-xs">
-                        <div className="w-2 h-2 rounded-full bg-[#D4AF37]"></div>
-                        {g.name}
+                      <div key={g.id} className="flex flex-col p-5 bg-stone-50 rounded-2xl border border-stone-100 font-black text-stone-900 uppercase tracking-widest text-xs">
+                        <div className="flex items-center gap-4">
+                           <div className="w-2 h-2 rounded-full bg-[#D4AF37]"></div>
+                           {g.name}
+                        </div>
+                        {g.familyMembers && g.familyMembers.length > 0 && (
+                          <div className="mt-3 ml-6 flex flex-wrap gap-2">
+                             {g.familyMembers.map((fm, idx) => (
+                               <span key={idx} className={`px-2 py-1 rounded-md text-[8px] border ${fm.age < 11 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}>
+                                 {fm.name} ({fm.age < 11 ? 'KID' : 'ADULT'})
+                               </span>
+                             ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                     {guests.filter(g => g.roomNo === selectedRoom.roomNo && g.property === selectedRoom.property).length === 0 && (

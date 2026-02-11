@@ -1,19 +1,6 @@
 import React, { useState } from 'react';
-import { Guest, FamilyMember } from '../types';
-import { 
-  Heart, 
-  CheckCircle, 
-  ArrowRight, 
-  Users, 
-  X, 
-  Plus, 
-  Trash2, 
-  ShieldCheck, 
-  Utensils, 
-  Wine, 
-  Music, 
-  MessageSquare 
-} from 'lucide-react';
+import { Guest, FamilyMember, DietaryPreference, WelcomeDrink } from '../types';
+import { Heart, CheckCircle, ArrowRight, Users, X, Plus, Trash2, ShieldCheck, Utensils, Wine, Music, MessageSquare, GlassWater } from 'lucide-react';
 
 interface RSVPFormProps {
   guest: Guest;
@@ -26,18 +13,29 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
   const [formData, setFormData] = useState<Partial<Guest>>({
     status: guest.status === 'Confirmed' ? 'Confirmed' : 'Pending',
     side: guest.side || 'Common',
+    dietaryPreference: guest.dietaryPreference || 'Veg',
+    welcomeDrinkPreference: guest.welcomeDrinkPreference || 'Soft Beverage',
     familyMembers: guest.familyMembers || [],
     allergies: guest.allergies || '',
     drinksPreference: guest.drinksPreference || 'Both',
     songRequest: guest.songRequest || '',
     personalMessage: guest.personalMessage || '',
+    mealPlan: guest.mealPlan || { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }
   });
 
   const [submitted, setSubmitted] = useState(false);
 
   const addFamilyMember = () => {
     const members = [...(formData.familyMembers || [])];
-    members.push({ name: '', age: 0, relation: 'Family' });
+    members.push({ 
+      name: '', 
+      age: 0, 
+      relation: 'Family', 
+      type: 'Adult', 
+      dietaryPreference: 'Veg',
+      welcomeDrinkPreference: 'Soft Beverage',
+      mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }
+    });
     setFormData({ ...formData, familyMembers: members });
   };
 
@@ -49,237 +47,116 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
 
   const updateFamilyMember = (index: number, field: keyof FamilyMember, value: any) => {
     const members = [...(formData.familyMembers || [])];
-    members[index] = { ...members[index], [field]: value };
+    const updatedMember = { ...members[index], [field]: value };
+    if (field === 'age') updatedMember.type = (value < 11) ? 'Kid' : 'Adult';
+    if (field === 'dietaryPreference') {
+      updatedMember.mealPlan = { lunch17: value, dinner17: value, lunch18: value, gala18: value };
+    }
+    members[index] = updatedMember;
     setFormData({ ...formData, familyMembers: members });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Automatically elevate status to 'Confirmed' upon submission of details
     const newStatus = formData.status === 'Declined' ? 'Declined' : 'Confirmed';
-    
-    // Calculate total pax: Main guest (1) + all family members
     const totalPax = 1 + (formData.familyMembers?.length || 0);
-    
-    onSubmit({ 
-      ...formData, 
-      status: newStatus,
-      paxCount: totalPax, 
-      rsvpTimestamp: new Date().toISOString() 
-    });
+    onSubmit({ ...formData, status: newStatus, paxCount: totalPax, rsvpTimestamp: new Date().toISOString() });
     setSubmitted(true);
   };
 
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-[#FCFAF2] flex items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full animate-in zoom-in duration-500">
-          <div className="bg-white rounded-[3rem] p-12 shadow-2xl border border-[#D4AF37]/20">
-            <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-8">
-              <CheckCircle size={40} />
-            </div>
-            <h2 className="text-3xl font-serif font-bold text-stone-900 mb-4">Dhanyawad!</h2>
-            <p className="text-stone-500 leading-relaxed italic mb-8">
-              "Your family RSVP is confirmed. We can't wait to see you all in Goa!"
-            </p>
-            <div className="space-y-4">
-              <button 
-                onClick={onGoToDashboard}
-                className="w-full gold-shimmer text-stone-900 py-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-lg flex items-center justify-center gap-3"
-              >
-                Go to My Dashboard
-              </button>
-            </div>
-          </div>
+  if (submitted) return (
+    <div className="min-h-screen bg-[#FCFAF2] flex items-center justify-center p-6 text-center">
+      <div className="max-w-md w-full animate-in zoom-in duration-500">
+        <div className="bg-white rounded-[3rem] p-12 shadow-2xl border border-[#D4AF37]/20">
+          <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-8"><CheckCircle size={40} /></div>
+          <h2 className="text-3xl font-serif font-bold text-stone-900 mb-4">Dhanyawad!</h2>
+          <p className="text-stone-500 italic mb-8">"Your family RSVP is confirmed. See you in Goa!"</p>
+          <button onClick={onGoToDashboard} className="w-full gold-shimmer text-stone-900 py-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-lg">Go to My Dashboard</button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#FCFAF2] py-12 md:py-24 px-4 relative">
-      {onExitSimulation && (
-        <div className="fixed top-0 left-0 w-full bg-stone-900 text-white py-3 px-6 z-[100] flex justify-between items-center border-b border-[#D4AF37]/30 shadow-2xl">
-           <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-[#D4AF37] animate-pulse"></div>
-              <span className="text-[10px] font-black uppercase tracking-[0.3em]">Invitation Preview: <strong>{guest.name}</strong></span>
-           </div>
-           <button onClick={onExitSimulation} className="flex items-center gap-2 bg-[#D4AF37] text-stone-900 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">
-              <X size={12} /> Close
-           </button>
-        </div>
-      )}
-
       <div className="max-w-3xl mx-auto space-y-12">
         <div className="text-center space-y-4 mb-12">
            <p className="font-cinzel text-[#B8860B] text-xl uppercase tracking-[0.5em]">Goa Bulaye Re!</p>
            <h1 className="text-4xl md:text-6xl font-serif font-bold text-stone-900">Mummy & Papa ki <span className="text-[#B8860B]">50vi Saalgira</span></h1>
-           <div className="h-px w-24 bg-[#D4AF37] mx-auto opacity-30"></div>
         </div>
-
-        <form onSubmit={handleSubmit} className="bg-white rounded-[4rem] p-8 md:p-16 shadow-2xl border border-stone-100 space-y-12 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-[0.05] pointer-events-none">
-            <Heart size={200} className="text-[#D4AF37]" />
-          </div>
-
-          {/* Attendance Section */}
+        <form onSubmit={handleSubmit} className="bg-white rounded-[4rem] p-8 md:p-16 shadow-2xl border border-stone-100 space-y-12 relative">
+          
           <div className="space-y-8">
-            <div className="flex items-center gap-4 border-b border-stone-100 pb-4">
-               <ShieldCheck className="text-[#D4AF37]" size={24} />
-               <h3 className="text-2xl font-serif font-bold text-stone-900">Attendance Status</h3>
-            </div>
-            
+            <h3 className="text-2xl font-serif font-bold text-stone-900 border-b pb-4">Attendance</h3>
             <div className="grid grid-cols-2 gap-4">
               {['Confirmed', 'Declined'].map((s) => (
-                <button
-                  key={s} type="button" onClick={() => setFormData({ ...formData, status: s as any })}
-                  className={`py-6 rounded-3xl text-xs font-black uppercase tracking-widest border-2 transition-all ${
-                    formData.status === s ? 'bg-stone-900 border-stone-900 text-white shadow-xl' : 'bg-white border-stone-100 text-stone-400'
-                  }`}
-                >
+                <button key={s} type="button" onClick={() => setFormData({ ...formData, status: s as any })} className={`py-6 rounded-3xl text-xs font-black uppercase tracking-widest border-2 transition-all ${formData.status === s ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-100 text-stone-400'}`}>
                   {s === 'Confirmed' ? 'Coming!' : 'Regretfully decline'}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Family Members Section */}
           <div className="space-y-8">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-4">
-               <div className="flex items-center gap-4">
-                  <Users className="text-[#D4AF37]" size={24} />
-                  <h3 className="text-2xl font-serif font-bold text-stone-900">Family Members</h3>
-               </div>
-               <button 
-                 type="button" 
-                 onClick={addFamilyMember}
-                 className="flex items-center gap-2 px-4 py-2 bg-[#FEF9E7] text-[#B8860B] rounded-full text-[10px] font-black uppercase tracking-widest border border-[#D4AF37]/20 hover:scale-105 transition-all"
-               >
-                 <Plus size={14} /> Add Member
-               </button>
+            <h3 className="text-2xl font-serif font-bold text-stone-900 border-b pb-4">A First Drink for You</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {(['Goan Urak', 'Chilled Beer', 'Soft Beverage'] as WelcomeDrink[]).map((drink) => (
+                <button key={drink} type="button" onClick={() => setFormData({ ...formData, welcomeDrinkPreference: drink })} className={`py-4 px-2 rounded-2xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${formData.welcomeDrinkPreference === drink ? 'bg-[#D4AF37] border-[#D4AF37] text-stone-900 shadow-lg' : 'bg-stone-50 border-stone-100 text-stone-400'}`}>
+                  {drink}
+                </button>
+              ))}
             </div>
-            
-            <div className="space-y-4">
+          </div>
+
+          <div className="space-y-8">
+            <h3 className="text-2xl font-serif font-bold text-stone-900 border-b pb-4">Food Preference</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {['Veg', 'Non-Veg'].map((pref) => (
+                <button key={pref} type="button" onClick={() => setFormData({ ...formData, dietaryPreference: pref as DietaryPreference, mealPlan: { lunch17: pref, dinner17: pref, lunch18: pref, gala18: pref } })} className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${formData.dietaryPreference === pref ? (pref === 'Veg' ? 'bg-green-600 border-green-600 text-white' : 'bg-red-600 border-red-600 text-white') : 'bg-stone-50 border-stone-100 text-stone-400'}`}>
+                  {pref}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-8">
+            <div className="flex items-center justify-between border-b pb-4">
+               <h3 className="text-2xl font-serif font-bold text-stone-900">Family Members</h3>
+               <button type="button" onClick={addFamilyMember} className="bg-[#FEF9E7] text-[#B8860B] px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest"><Plus size={14} /> Add Member</button>
+            </div>
+            <div className="space-y-6">
               {formData.familyMembers?.map((member, idx) => (
-                <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-stone-50 p-6 rounded-[2rem] border border-stone-100">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase text-stone-400 ml-2">Name</label>
-                    <input 
-                      type="text" 
-                      placeholder="Name"
-                      value={member.name}
-                      onChange={(e) => updateFamilyMember(idx, 'name', e.target.value)}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold text-stone-900 focus:outline-none focus:border-[#D4AF37]"
-                      required
-                    />
+                <div key={idx} className="bg-stone-50 p-6 rounded-[2rem] border border-stone-100 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" placeholder="Name" value={member.name} onChange={(e) => updateFamilyMember(idx, 'name', e.target.value)} className="bg-white border p-3 rounded-xl text-xs font-bold" required />
+                    <input type="number" placeholder="Age" value={member.age || ''} onChange={(e) => updateFamilyMember(idx, 'age', parseInt(e.target.value))} className="bg-white border p-3 rounded-xl text-xs font-bold" />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase text-stone-400 ml-2">Age</label>
-                    <input 
-                      type="number" 
-                      placeholder="Age"
-                      value={member.age || ''}
-                      onChange={(e) => updateFamilyMember(idx, 'age', parseInt(e.target.value))}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold text-stone-900 focus:outline-none focus:border-[#D4AF37]"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                       <p className="text-[8px] font-black text-stone-400 uppercase">First Drink</p>
+                       <select className="bg-white border p-2 rounded-xl text-[9px] w-full font-bold uppercase" value={member.welcomeDrinkPreference} onChange={(e) => updateFamilyMember(idx, 'welcomeDrinkPreference', e.target.value)}>
+                          <option value="Goan Urak">Goan Urak</option>
+                          <option value="Chilled Beer">Chilled Beer</option>
+                          <option value="Soft Beverage">Soft Beverage</option>
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <p className="text-[8px] font-black text-stone-400 uppercase">Food</p>
+                       <div className="flex bg-white rounded-xl p-1 border border-stone-200">
+                        {['Veg', 'Non-Veg'].map((p) => (
+                          <button key={p} type="button" onClick={() => updateFamilyMember(idx, 'dietaryPreference', p)} className={`flex-grow px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all ${member.dietaryPreference === p ? (p === 'Veg' ? 'bg-green-500 text-white' : 'bg-red-500 text-white') : 'text-stone-400'}`}>
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-end gap-2">
-                    <button 
-                      type="button"
-                      onClick={() => removeFamilyMember(idx)}
-                      className="flex-grow flex items-center justify-center gap-2 px-6 py-3.5 bg-white border border-red-100 text-red-500 rounded-xl hover:bg-red-50 transition-all text-[10px] font-black uppercase tracking-widest"
-                    >
-                      <Trash2 size={14} /> Remove
-                    </button>
-                  </div>
+                  <button type="button" onClick={() => removeFamilyMember(idx)} className="text-red-400 p-2 hover:bg-red-50 rounded-lg transition-colors ml-auto block"><Trash2 size={16} /></button>
                 </div>
               ))}
-              {formData.familyMembers?.length === 0 && (
-                <p className="text-center text-stone-400 italic text-sm py-4">Are family members joining? Add them above!</p>
-              )}
             </div>
           </div>
-
-          {/* Celebration Preferences Section */}
-          <div className="space-y-8 pt-4">
-            <div className="flex items-center gap-4 border-b border-stone-100 pb-4">
-               <Heart className="text-[#D4AF37]" size={24} />
-               <h3 className="text-2xl font-serif font-bold text-stone-900">Celebration Preferences</h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Drink Preferences */}
-              <div className="space-y-4">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase text-stone-400 tracking-widest">
-                  <Wine size={14} className="text-[#D4AF37]" /> Refreshment Preference
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['Alcohol', 'Non-Alcohol', 'Both'] as const).map((pref) => (
-                    <button
-                      key={pref}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, drinksPreference: pref })}
-                      className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-tight border-2 transition-all ${
-                        formData.drinksPreference === pref ? 'bg-stone-900 border-stone-900 text-white shadow-md' : 'bg-white border-stone-100 text-stone-400 hover:border-[#D4AF37]/20'
-                      }`}
-                    >
-                      {pref}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Dietary Requirements */}
-              <div className="space-y-4">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase text-stone-400 tracking-widest">
-                  <Utensils size={14} className="text-[#D4AF37]" /> Dietary Restrictions
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Nut allergy, Jain Food..."
-                  value={formData.allergies}
-                  onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-                  className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4 text-sm font-bold text-stone-900 focus:outline-none focus:border-[#D4AF37]"
-                />
-              </div>
-            </div>
-
-            {/* Song Request */}
-            <div className="space-y-4">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase text-stone-400 tracking-widest">
-                <Music size={14} className="text-[#D4AF37]" /> Dedicate a Song to Mummy & Papa
-              </label>
-              <input 
-                type="text" 
-                placeholder="Suggest a song for the Sangeet Night..."
-                value={formData.songRequest}
-                onChange={(e) => setFormData({ ...formData, songRequest: e.target.value })}
-                className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4 text-sm font-bold text-stone-900 focus:outline-none focus:border-[#D4AF37]"
-              />
-            </div>
-
-            {/* Personal Message */}
-            <div className="space-y-4">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase text-stone-400 tracking-widest">
-                <MessageSquare size={14} className="text-[#D4AF37]" /> Heartfelt Message
-              </label>
-              <textarea 
-                rows={3}
-                placeholder="Share a memory or a wish for their 50th year..."
-                value={formData.personalMessage}
-                onChange={(e) => setFormData({ ...formData, personalMessage: e.target.value })}
-                className="w-full bg-stone-50 border border-stone-100 rounded-3xl px-5 py-5 text-sm font-bold text-stone-900 focus:outline-none focus:border-[#D4AF37] resize-none"
-              />
-            </div>
-          </div>
-
-          <button 
-            type="submit"
-            className="w-full gold-shimmer text-stone-900 py-10 rounded-full font-black uppercase tracking-[0.4em] text-sm shadow-2xl hover:scale-[1.03] transition-all flex items-center justify-center gap-4"
-          >
-            Submit Celebration RSVP <ArrowRight size={20} />
-          </button>
+          <button type="submit" className="w-full gold-shimmer text-stone-900 py-10 rounded-full font-black uppercase tracking-[0.4em] text-sm shadow-2xl flex items-center justify-center gap-4">Confirm Celebrating RSVP <ArrowRight size={20} /></button>
         </form>
       </div>
     </div>

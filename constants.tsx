@@ -1,4 +1,4 @@
-import { Guest, Budget, RoomDetail, Quotation, EventFunction, Task } from './types';
+import { Guest, Budget, RoomDetail, Quotation, EventFunction, Task, DietaryPreference } from './types';
 
 export const EVENT_CONFIG = {
   title: "50th Anniversary of Mummy & Papa",
@@ -66,11 +66,13 @@ export const INITIAL_GUESTS: Guest[] = [
     property: 'Villa-Pool',
     roomNo: '101',
     dietaryNote: 'Pure Veg',
+    dietaryPreference: 'Veg',
+    welcomeDrinkPreference: 'Soft Beverage',
     sangeetAct: 'Guest of Honor',
     pickupScheduled: true,
     status: 'Confirmed',
     dressCode: 'Golden Saree',
-    mealPlan: { lunch17: 'Special Thali', dinner18: 'Royal Gala' }
+    mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }
   },
   {
     id: 'guest-papa',
@@ -80,11 +82,13 @@ export const INITIAL_GUESTS: Guest[] = [
     property: 'Villa-Pool',
     roomNo: '101',
     dietaryNote: 'Standard Veg',
+    dietaryPreference: 'Veg',
+    welcomeDrinkPreference: 'Soft Beverage',
     sangeetAct: 'Guest of Honor',
     pickupScheduled: true,
     status: 'Confirmed',
     dressCode: 'Bandhgala',
-    mealPlan: { lunch17: 'Special Thali', dinner18: 'Royal Gala' }
+    mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }
   },
   ...Array.from({ length: 43 }, (_, i) => ({
     id: `guest-${i + 1}`,
@@ -94,11 +98,13 @@ export const INITIAL_GUESTS: Guest[] = [
     property: 'Villa-Pool' as any,
     roomNo: '102',
     dietaryNote: 'Standard Veg',
+    dietaryPreference: 'Veg' as DietaryPreference,
+    welcomeDrinkPreference: 'Soft Beverage' as any,
     sangeetAct: 'TBD',
     pickupScheduled: false,
     status: 'Pending' as any,
     dressCode: 'Glitz',
-    mealPlan: { lunch17: 'Goan Buffet', dinner18: 'Royal Thali' }
+    mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }
   }))
 ];
 
@@ -114,94 +120,84 @@ export const INITIAL_BUDGET: Budget = {
   bartenderRate: 10000,
   accessoriesRate: 5000,
   finalCateringPax: 0,
+  finalCateringKidsPax: 0,
+  barInventory: {
+    urakLitres: 0,
+    beerCases: 0,
+    mixersCrates: 0
+  },
+  customInventory: [
+    { id: 'i-1', label: 'Bottled Water (250ml)', quantity: 20, unit: 'Cases', source: 'Vasco Wholesaler', cost: 6000, isPurchased: false },
+    { id: 'i-2', label: 'Ice Blocks', quantity: 200, unit: 'kg', source: 'Local Delivery', cost: 4000, isPurchased: false }
+  ],
+  cateringBreakdown: {
+    lunch17: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 },
+    dinner17: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 },
+    lunch18: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 },
+    gala18: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 }
+  },
   finalizedVendors: [],
   committedSpend: 0,
-  selectedPath: 'TBD',
-  wishlistItems: [
-    { id: 'w-1', label: 'Extra LED Flooring (Sisters\' Request)', cost: 25000, category: 'Wishlist', lead: 'Brother' },
-    { id: 'w-2', label: 'Bollywood Props Pkg', cost: 12000, category: 'Wishlist', lead: 'Planner' },
-    { id: 'w-3', label: 'Imported Flower Upgrade', cost: 45000, category: 'Wishlist', lead: 'Brother' }
-  ]
+  wishlistItems: [],
+  selectedPath: 'TBD'
 };
 
 export const QUOTATIONS: Quotation[] = [
   {
-    vendorName: "Bespoke Villa Catering",
-    contactPerson: "Divyanshi Sharma",
-    phoneNumber: "+91 9876543210",
+    vendorName: "Rustic Roofs (Villa Path)",
+    contactPerson: "Divyanshi",
+    phoneNumber: "+91 98765 43210",
     breakfast: 450,
-    lunch: 850,
-    dinner: 1250,
-    galaDinner: 2200,
+    lunch: 800,
+    dinner: 1200,
+    galaDinner: 1800,
     venueRental: 40000,
-    roomRate: 0,
+    roomRate: 15000,
     extraPax: 1500,
-    menuHighlights: ["Lobster Thermidor", "Heritage Bebinca"],
-    effortScore: 'High'
+    menuHighlights: ["Prawn Balchao", "Mutton Rogan Josh", "Bebinca"],
+    effortScore: "High"
   },
   {
-    vendorName: "Full-Resort Package",
-    contactPerson: "Xavier D'Souza",
-    phoneNumber: "+91 9123456789",
-    breakfast: 850,
-    lunch: 1500,
-    dinner: 2500,
-    galaDinner: 4500,
-    venueRental: 150000,
-    roomRate: 8500,
-    extraPax: 3000,
-    menuHighlights: ["Serradura", "Chicken Xacuti"],
-    effortScore: 'Low'
+    vendorName: "Marinha Dourada (Resort Path)",
+    contactPerson: "Resort Manager",
+    phoneNumber: "+91 91234 56789",
+    breakfast: 650,
+    lunch: 1200,
+    dinner: 1800,
+    galaDinner: 2500,
+    venueRental: 200000,
+    roomRate: 8000,
+    extraPax: 2000,
+    menuHighlights: ["Continental Buffet", "Thai Curry", "Live Pasta Station"],
+    effortScore: "Low"
   }
 ];
 
 export const VILLA_TASKS: Task[] = [
   {
-    id: 'vt-1',
-    title: 'Power Backup & DJ Supply Check',
-    description: 'Verify if Lilia has sufficient phase power for Savio\'s sound rig. Rent 15kva generator if needed.',
+    id: 'task-garnish',
+    title: 'Welcome Bar Garnish Prep',
+    description: 'Ensure fresh chilies, rock salt, and lemons are sliced and ready at the Urak station by 11:00 AM on the 17th.',
     owner: 'Brother',
     status: 'Pending',
-    category: 'Logistics'
+    category: 'Catering',
+    cost: 3000
   },
   {
-    id: 'vt-2',
-    title: 'Caterer Water & Prep Space Audit',
-    description: 'Ensure Villa prep area has running water and drainage for the catering team.',
-    owner: 'Brother',
-    status: 'Pending',
-    category: 'Catering'
-  },
-  {
-    id: 'vt-3',
-    title: 'Google Map Pin Verification',
-    description: 'Check if the "Lilia" pin is accurate for all 45 guests. Send voice-note with entrance directions.',
-    owner: 'Planner',
-    status: 'Pending',
-    category: 'Logistics'
-  },
-  {
-    id: 'vt-4',
-    title: 'Extra Helper/Runner Hiring',
-    description: 'Hire 2 local boys to help with table movements and guest concierge on 18th morning.',
+    id: 'task-1',
+    title: 'Dabolim Pickup Sync',
+    description: 'Coordinate with husband for early morning arrivals.',
     owner: 'Husband',
     status: 'Pending',
-    category: 'Logistics'
+    category: 'Logistics',
+    cost: 5000
   },
   {
-    id: 'vt-5',
-    title: 'Edison Bulb & Fairy Light Upgrade',
-    description: 'Finalize the layout for the sunset vows. Reinvesting ₹30k from savings into "Rich" lighting.',
+    id: 'task-2',
+    title: 'DJ Savio Soundcheck',
+    description: 'Check acoustics in the Red Hall.',
     owner: 'Brother',
     status: 'Pending',
-    category: 'Decor'
-  },
-  {
-    id: 'vt-6',
-    title: 'Elder Preference Briefing',
-    description: 'Brief catering on specific tea timings and less-spice preferences for Mummy and Papa.',
-    owner: 'Planner',
-    status: 'Pending',
-    category: 'Catering'
+    category: 'Ceremony'
   }
 ];
