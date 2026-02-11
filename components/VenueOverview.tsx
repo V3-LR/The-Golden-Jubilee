@@ -1,127 +1,105 @@
-import React from 'react';
-import { MapPin, Wind, Waves, Building2, Hotel, Calendar, ShieldCheck, Maximize, TreePine, AlertCircle, Navigation } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { MapPin, Building2, Hotel, Calendar, Maximize, TreePine, Navigation, Camera } from 'lucide-react';
 import { PROPERTY_LOCATIONS } from '../constants';
+import { RoomDetail } from '../types';
 
-const VenueOverview: React.FC = () => {
+interface VenueOverviewProps {
+  onUpdateRoomImage?: (roomNo: string, property: string, base64: string) => void;
+  rooms: RoomDetail[];
+}
+
+const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadTarget, setUploadTarget] = useState<{roomNo: string, property: string} | null>(null);
+
+  // Get current images from state-driven room database
+  const getRoomImg = (roomNo: string, property: string, fallback: string) => {
+    return rooms.find(r => r.roomNo === roomNo && r.property === property)?.image || fallback;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && uploadTarget && onUpdateRoomImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onUpdateRoomImage(uploadTarget.roomNo, uploadTarget.property, reader.result as string);
+        setUploadTarget(null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerUpload = (roomNo: string, property: string) => {
+    setUploadTarget({ roomNo, property });
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="space-y-10 md:space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+      
       {/* Property 1: Poolside Villa */}
       <section className="space-y-6">
-        <div className="relative h-[300px] md:h-[450px] rounded-[2rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl group border-4 md:border-8 border-white">
-          <img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80" className="w-full h-full object-cover" alt="Villa A" />
+        <div className="relative h-[300px] md:h-[550px] rounded-[2rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl group border-4 md:border-8 border-white">
+          <img src={getRoomImg("101", "Villa-Pool", "https://images.unsplash.com/photo-1628592102751-ba83b03bc42e?auto=format&fit=crop&q=80")} className="w-full h-full object-cover" alt="Villa A" />
           <div className="absolute inset-0 bg-gradient-to-t from-stone-900/95 via-stone-900/10 to-transparent flex items-end p-6 md:p-16">
             <div className="max-w-2xl">
               <span className="bg-amber-500 text-stone-900 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-4 inline-block">Estate Hub</span>
               <h2 className="text-3xl md:text-6xl font-serif font-bold text-white mb-2 leading-tight">Villa A: Poolside</h2>
-              <div className="flex items-center gap-3 text-stone-300 mb-2">
+              <div className="flex items-center gap-3 text-stone-300">
                 <MapPin size={16} className="text-amber-500" />
                 <span className="text-xs md:text-sm font-bold uppercase tracking-widest">{PROPERTY_LOCATIONS.FAMILY_ESTATE.name}</span>
               </div>
-              <p className="text-stone-300 text-sm md:text-xl font-light leading-relaxed hidden sm:block">The heart of our celebration. Featuring heritage rocking chairs and verandas for morning tea.</p>
             </div>
           </div>
+          {onUpdateRoomImage && (
+            <button onClick={() => triggerUpload("101", "Villa-Pool")} className="absolute top-8 right-8 bg-[#D4AF37] text-stone-900 p-4 rounded-full shadow-2xl hover:scale-110 transition-all opacity-0 group-hover:opacity-100">
+              <Camera size={24} />
+            </button>
+          )}
         </div>
       </section>
 
       {/* Property 2: Red Hall Villa */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 items-stretch">
-        <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-xl min-h-[300px]">
-          <img src="https://images.unsplash.com/photo-1523217582562-09d0def993a6?auto=format&fit=crop&q=80" className="w-full h-full object-cover" alt="Villa B" />
-          <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg">
-            <Building2 size={14} /> Red Heritage Villa
-          </div>
+        <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-xl min-h-[400px] group border-4 border-white">
+          <img src={getRoomImg("201", "Villa-Hall", "https://images.unsplash.com/photo-1523217582562-09d0def993a6?auto=format&fit=crop&q=80")} className="w-full h-full object-cover" alt="Villa B" />
+          {onUpdateRoomImage && (
+            <button onClick={() => triggerUpload("201", "Villa-Hall")} className="absolute top-4 right-4 bg-[#D4AF37] text-stone-900 p-3 rounded-full shadow-2xl opacity-0 group-hover:opacity-100 transition-all">
+              <Camera size={20} />
+            </button>
+          )}
         </div>
         <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 border border-stone-200 shadow-sm flex flex-col justify-center">
-          <div className="flex items-center gap-4 mb-6 md:mb-8">
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-red-50 rounded-2xl flex items-center justify-center">
-              <Maximize className="text-red-600" size={24} />
-            </div>
-            <div>
-              <h3 className="text-xl md:text-3xl font-serif font-bold text-stone-900 leading-tight">Grand Indoor Hall</h3>
-              <p className="text-stone-400 font-bold uppercase text-[9px] tracking-widest">{PROPERTY_LOCATIONS.FAMILY_ESTATE.name}</p>
-            </div>
+          <div className="flex items-center gap-4 mb-6">
+            <Maximize className="text-red-600" size={32} />
+            <h3 className="text-xl md:text-3xl font-serif font-bold text-stone-900">Grand Indoor Hall</h3>
           </div>
-          <p className="text-stone-600 text-sm md:text-lg mb-6 leading-relaxed">
-            Stunning Red Heritage House located at {PROPERTY_LOCATIONS.FAMILY_ESTATE.address}, designated for indoor family gatherings.
-          </p>
+          <p className="text-stone-600 text-sm md:text-lg mb-6 leading-relaxed">Heritage Red House designation for indoor gatherings.</p>
           <div className="grid grid-cols-1 gap-3">
             {['Indoor Chill Zones', 'Heritage Balconies', '5 Luxury Suites'].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 bg-stone-50 rounded-xl border border-stone-100 text-xs font-bold text-stone-800 uppercase tracking-tight">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                {item}
+              <div key={i} className="flex items-center gap-3 p-3 bg-stone-50 rounded-xl border border-stone-100 text-xs font-bold text-stone-800 uppercase">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>{item}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Property 3: TreeHouse Boutique */}
-      <section className="flex flex-col lg:flex-row gap-6 md:gap-10">
-        <div className="lg:w-2/3 bg-white rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-stone-200 flex flex-col md:flex-row shadow-lg">
-          <div className="md:w-1/2 h-48 md:h-auto">
-            <img src="https://images.unsplash.com/photo-1445013032360-91f0d0d3c64e?auto=format&fit=crop&q=80" className="w-full h-full object-cover" alt="TreeHouse Boutique" />
-          </div>
-          <div className="md:w-1/2 p-6 md:p-10 flex flex-col justify-center">
-            <div className="flex items-center gap-2 text-green-600 font-black text-[9px] uppercase tracking-widest mb-4">
-              <TreePine size={14} /> Boutique Stay
-            </div>
-            <h3 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 mb-3">TreeHouse Boutique</h3>
-            <div className="flex items-center gap-2 text-stone-400 mb-4">
-              <MapPin size={12} className="text-green-500" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">{PROPERTY_LOCATIONS.FAMILY_ESTATE.name}</span>
-            </div>
-            <p className="text-stone-600 text-xs md:text-sm leading-relaxed mb-6">
-              Modern boutique rooms sharing the estate entrance at {PROPERTY_LOCATIONS.FAMILY_ESTATE.address}.
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
-                <ShieldCheck size={14} className="text-green-500" /> Shared Estate Hub
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
-                <Navigation size={14} className="text-amber-500" /> Main Drop-off Point
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="lg:w-1/3 bg-amber-50 rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 flex flex-col justify-center border border-amber-100">
-          <p className="text-xs text-amber-900 leading-relaxed italic mb-4">
-            "This property is located within the Lilia by Rustic Roofs complex for seamless guest movement."
-          </p>
-          <a 
-            href={PROPERTY_LOCATIONS.FAMILY_ESTATE.mapLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-white p-4 rounded-2xl border border-amber-100 flex items-center justify-between group hover:border-[#D4AF37] transition-all"
-          >
-            <div>
-              <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Main Google Pin</span>
-              <div className="text-sm font-black text-stone-900 uppercase">Arossim Estate</div>
-            </div>
-            <Navigation className="text-[#D4AF37] group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" size={20} />
-          </a>
-        </div>
-      </section>
-
       {/* Property 4: Marinha Dourada */}
       <section className="bg-stone-900 rounded-[2.5rem] md:rounded-[4rem] p-8 md:p-16 text-white relative overflow-hidden shadow-2xl">
         <div className="relative z-10 max-w-3xl">
-          <div className="flex items-center gap-4 mb-6 md:mb-8">
+          <div className="flex items-center gap-4 mb-6">
             <Hotel className="text-amber-500" size={32} />
             <h3 className="text-2xl md:text-4xl font-serif font-bold text-white leading-tight">{PROPERTY_LOCATIONS.RESORT.name}</h3>
           </div>
-          <p className="text-stone-400 text-base md:text-xl mb-8 md:mb-12 font-light leading-relaxed">
-            Located in {PROPERTY_LOCATIONS.RESORT.address}, complementing our villa stay with an AC Banquet Hall for the Golden Gala.
+          <p className="text-stone-400 text-base md:text-xl mb-8 font-light leading-relaxed">
+            Located in Arpora, hosting the AC Banquet Hall for our grand finale.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div className="p-6 md:p-8 bg-stone-800/50 rounded-[2rem] border border-stone-700">
-              <Maximize className="text-amber-500 mb-4" size={24} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-8 bg-stone-800/50 rounded-[2rem] border border-stone-700">
               <h4 className="text-lg font-bold mb-2">Banquet Hall</h4>
-              <p className="text-stone-400 text-xs md:text-sm">Ideal for the formal Gala Dinner. 10:00 PM music deadline applies.</p>
-            </div>
-            <div className="p-6 md:p-8 bg-stone-800/50 rounded-[2rem] border border-stone-700">
-              <Calendar className="text-amber-500 mb-4" size={24} />
-              <h4 className="text-lg font-bold mb-2">Deluxe Stays</h4>
-              <p className="text-stone-400 text-xs md:text-sm">Special Arpora-tier corporate rates for friends and overflow guests.</p>
+              <p className="text-stone-400 text-xs">AC comfort for the Gala Dinner. Arpora legacy partner.</p>
             </div>
           </div>
         </div>
