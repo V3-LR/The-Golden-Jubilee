@@ -11,16 +11,16 @@ import RoomMap from './components/RoomMap';
 import Login from './components/Login';
 import RSVPManager from './components/RSVPManager';
 import GuestPortal from './components/GuestPortal';
-import { Menu, ShieldCheck, UserPlus, EyeOff, CheckCircle, RefreshCw } from 'lucide-react';
+import { Menu, ShieldCheck, UserPlus, EyeOff, CheckCircle, RefreshCw, Camera, Download } from 'lucide-react';
 
-const STABLE_KEY = 'ESTATE_PLANNER_STABLE_V1';
-const MEDIA_KEY_ROOMS = 'ESTATE_PLANNER_ROOMS_V1';
-const MEDIA_KEY_EVENTS = 'ESTATE_PLANNER_EVENTS_V1';
-const SESSION_KEY = 'ESTATE_PLANNER_SESSION_STABLE';
+const STABLE_KEY = 'ESTATE_PLANNER_STABLE_V4';
+const MEDIA_KEY_ROOMS = 'ESTATE_PLANNER_ROOMS_V4';
+const MEDIA_KEY_EVENTS = 'ESTATE_PLANNER_EVENTS_V4';
+const SESSION_KEY = 'ESTATE_PLANNER_SESSION_V4';
 
 /**
- * Image Compression Utility
- * Prevents "Blank Image" bug by staying within localStorage 5MB quota
+ * Aggressive Image Compression Utility
+ * Resizes images to 800px width and 0.6 quality to ensure stay within 5MB LocalStorage limit
  */
 const compressImage = (base64Str: string): Promise<string> => {
   return new Promise((resolve) => {
@@ -28,7 +28,7 @@ const compressImage = (base64Str: string): Promise<string> => {
     img.src = base64Str;
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 1200;
+      const MAX_WIDTH = 800; // Aggressive downsizing for storage
       let width = img.width;
       let height = img.height;
 
@@ -41,7 +41,7 @@ const compressImage = (base64Str: string): Promise<string> => {
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality JPEG
+      resolve(canvas.toDataURL('image/jpeg', 0.6)); // High compression
     };
   });
 };
@@ -86,6 +86,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [budget, setBudget] = useState<Budget>(INITIAL_BUDGET);
 
+  // Persistence hooks
   useEffect(() => {
     if (userRole) {
       localStorage.setItem(SESSION_KEY, JSON.stringify({ role: userRole, guestId: activeGuestId, lastTab: activeTab }));
@@ -106,14 +107,16 @@ const App: React.FC = () => {
     setIsSyncing(true);
     const optimized = await compressImage(newImage);
     setRooms(prev => prev.map(r => (r.roomNo === roomNo && r.property === property) ? { ...r, image: optimized } : r));
-    setTimeout(() => setIsSyncing(false), 200);
+    setSaveIndicator(true);
+    setTimeout(() => { setIsSyncing(false); setSaveIndicator(false); }, 1000);
   };
 
   const handleUpdateEventImage = async (eventId: string, newImage: string) => {
     setIsSyncing(true);
     const optimized = await compressImage(newImage);
     setItinerary(prev => prev.map(e => e.id === eventId ? { ...e, image: optimized } : e));
-    setTimeout(() => setIsSyncing(false), 200);
+    setSaveIndicator(true);
+    setTimeout(() => { setIsSyncing(false); setSaveIndicator(false); }, 1000);
   };
 
   const handleTabChange = useCallback((tab: AppTab) => {
@@ -128,31 +131,17 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.clear();
-    window.location.href = window.location.origin + window.location.pathname;
+    window.location.reload();
   };
 
-  const handleAddGuest = () => {
-    const newGuest: Guest = {
-      id: `g-${Date.now()}`,
-      name: 'New Honored Guest',
-      category: 'Friend',
-      side: 'Common',
-      property: 'Resort',
-      roomNo: 'TBD',
-      status: 'Pending',
-      dietaryNote: 'Standard',
-      sangeetAct: 'TBD',
-      pickupScheduled: false,
-      dressCode: 'Indo-Western Glitz',
-      mealPlan: { lunch17: 'TBD', dinner18: 'TBD' }
-    };
-    setGuests(prev => [newGuest, ...prev]);
-  };
-
-  const forceSync = () => {
-    setIsSyncing(true);
-    setSaveIndicator(true);
-    setTimeout(() => { setSaveIndicator(false); setIsSyncing(false); }, 1500);
+  const exportPlan = () => {
+    const data = { guests, rooms, itinerary, budget };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Golden-Jubilee-Plan-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
   };
 
   if (!userRole) {
@@ -198,7 +187,7 @@ const App: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
             <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master List</h2>
             {userRole === 'planner' && (
-              <button onClick={handleAddGuest} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl">
+              <button onClick={() => setGuests(p => [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Resort', roomNo: 'TBD', status: 'Pending', mealPlan: { lunch17: '', dinner18: '' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...p])} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl">
                 <UserPlus size={18} /> New Entry
               </button>
             )}
@@ -232,18 +221,26 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FCFAF2] flex flex-col lg:flex-row">
-      {isPending && <div className="fixed top-0 left-0 w-full h-1 bg-[#D4AF37] z-[200] animate-pulse"></div>}
       {!isStrictGuest && <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} role={userRole} onLogout={handleLogout} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />}
       <main className={`flex-grow min-h-screen w-full transition-all ${!isStrictGuest ? 'lg:ml-64' : ''}`}>
         {!isStrictGuest && (
           <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[40] border-b border-[#D4AF37]/10">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={24} /></button>
+            <div className="hidden md:block">
+              <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Estate Sync Online</p>
+              <h1 className="text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h1>
+            </div>
             <div className="flex items-center gap-3">
-              {saveIndicator ? <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full"><CheckCircle size={16} className="text-[#D4AF37]" /> <span className="text-[10px] font-black uppercase">Synced</span></div> : <button onClick={forceSync} className="flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100"><RefreshCw size={16} className={`text-[#D4AF37] ${isSyncing ? 'animate-spin' : ''}`} /> <span className="text-[10px] font-black uppercase">Save</span></button>}
+              {userRole === 'planner' && (
+                <button onClick={exportPlan} className="bg-white border-2 border-stone-100 text-stone-600 px-6 py-3 rounded-full text-[10px] font-black uppercase flex items-center gap-2 hover:border-[#D4AF37]">
+                  <Download size={16} /> Global Snapshot
+                </button>
+              )}
+              {saveIndicator ? <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-in zoom-in"><CheckCircle size={16} className="text-[#D4AF37]" /> <span className="text-[10px] font-black uppercase">Saved</span></div> : <div className="flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 opacity-50"><RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> <span className="text-[10px] font-black uppercase">Live</span></div>}
             </div>
           </header>
         )}
-        <div className={`${isStrictGuest ? 'w-full' : 'max-w-7xl mx-auto px-4 md:px-10 py-10'} ${isPending ? 'opacity-70 grayscale-[0.3]' : ''}`}>
+        <div className={`${isStrictGuest ? 'w-full' : 'max-w-7xl mx-auto px-4 md:px-10 py-10'}`}>
           {renderContent()}
         </div>
       </main>

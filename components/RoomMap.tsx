@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Guest, RoomDetail, PropertyType } from '../types';
-import { Users, Bed, CheckCircle2, Circle, Home, Building2, Hotel, TreePine, Camera } from 'lucide-react';
+import { Users, Bed, CheckCircle2, Circle, Home, Building2, Hotel, TreePine, Camera, Edit3 } from 'lucide-react';
 
 interface RoomMapProps {
   guests: Guest[];
@@ -87,9 +87,9 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage }) => {
                 {onUpdateImage && (
                   <button 
                     onClick={(e) => triggerUpload(e, room)}
-                    className="absolute bottom-4 right-4 bg-white/20 hover:bg-white/90 backdrop-blur text-white hover:text-stone-900 p-2 rounded-full transition-all border border-white/30"
+                    className="absolute bottom-4 right-4 bg-white text-stone-900 px-3 py-2 rounded-full border-2 border-[#D4AF37] shadow-xl flex items-center gap-2 font-black text-[9px] uppercase tracking-widest hover:scale-105 transition-all"
                   >
-                    <Camera size={14} />
+                    <Camera size={14} className="text-[#D4AF37]" /> Edit
                   </button>
                 )}
               </div>
@@ -110,7 +110,7 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage }) => {
 
       {selectedRoom && (
         <div className="fixed inset-0 bg-stone-900/95 z-50 flex items-center justify-center p-4" onClick={() => setSelectedRoom(null)}>
-          <div className="bg-white rounded-[2.5rem] max-w-4xl w-full overflow-hidden flex flex-col md:flex-row" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[2.5rem] max-w-4xl w-full overflow-hidden flex flex-col md:flex-row animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
             <div className="md:w-1/2 h-64 md:h-auto">
               <img src={selectedRoom.image} className="w-full h-full object-cover" alt={selectedRoom.title} />
             </div>

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { MapPin, Building2, Hotel, Calendar, Maximize, TreePine, Navigation, Camera } from 'lucide-react';
+import { MapPin, Building2, Hotel, Maximize, TreePine, Navigation, Camera, Edit2 } from 'lucide-react';
 import { PROPERTY_LOCATIONS } from '../constants';
 import { RoomDetail } from '../types';
 
@@ -12,7 +12,6 @@ const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{roomNo: string, property: string} | null>(null);
 
-  // Get current images from state-driven room database
   const getRoomImg = (roomNo: string, property: string, fallback: string) => {
     return rooms.find(r => r.roomNo === roomNo && r.property === property)?.image || fallback;
   };
@@ -53,8 +52,11 @@ const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms 
             </div>
           </div>
           {onUpdateRoomImage && (
-            <button onClick={() => triggerUpload("101", "Villa-Pool")} className="absolute top-8 right-8 bg-[#D4AF37] text-stone-900 p-4 rounded-full shadow-2xl hover:scale-110 transition-all opacity-0 group-hover:opacity-100">
-              <Camera size={24} />
+            <button 
+              onClick={() => triggerUpload("101", "Villa-Pool")} 
+              className="absolute top-8 right-8 bg-white text-stone-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-black text-[10px] uppercase tracking-widest border-4 border-[#D4AF37] hover:scale-110 transition-all z-20"
+            >
+              <Camera size={18} className="text-[#D4AF37]" /> Edit Banner
             </button>
           )}
         </div>
@@ -65,8 +67,11 @@ const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms 
         <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-xl min-h-[400px] group border-4 border-white">
           <img src={getRoomImg("201", "Villa-Hall", "https://images.unsplash.com/photo-1523217582562-09d0def993a6?auto=format&fit=crop&q=80")} className="w-full h-full object-cover" alt="Villa B" />
           {onUpdateRoomImage && (
-            <button onClick={() => triggerUpload("201", "Villa-Hall")} className="absolute top-4 right-4 bg-[#D4AF37] text-stone-900 p-3 rounded-full shadow-2xl opacity-0 group-hover:opacity-100 transition-all">
-              <Camera size={20} />
+            <button 
+              onClick={() => triggerUpload("201", "Villa-Hall")} 
+              className="absolute top-6 right-6 bg-white text-stone-900 px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 font-black text-[9px] uppercase tracking-widest border-2 border-[#D4AF37] z-20"
+            >
+              <Edit2 size={14} className="text-[#D4AF37]" /> Edit View
             </button>
           )}
         </div>
@@ -87,22 +92,30 @@ const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms 
       </section>
 
       {/* Property 4: Marinha Dourada */}
-      <section className="bg-stone-900 rounded-[2.5rem] md:rounded-[4rem] p-8 md:p-16 text-white relative overflow-hidden shadow-2xl">
+      <section className="bg-stone-900 rounded-[2.5rem] md:rounded-[4rem] p-8 md:p-16 text-white relative overflow-hidden shadow-2xl group">
         <div className="relative z-10 max-w-3xl">
           <div className="flex items-center gap-4 mb-6">
             <Hotel className="text-amber-500" size={32} />
             <h3 className="text-2xl md:text-4xl font-serif font-bold text-white leading-tight">{PROPERTY_LOCATIONS.RESORT.name}</h3>
           </div>
           <p className="text-stone-400 text-base md:text-xl mb-8 font-light leading-relaxed">
-            Located in Arpora, hosting the AC Banquet Hall for our grand finale.
+            Located in Arpora, hosting the AC Ballroom for our grand finale.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-8 bg-stone-800/50 rounded-[2rem] border border-stone-700">
-              <h4 className="text-lg font-bold mb-2">Banquet Hall</h4>
-              <p className="text-stone-400 text-xs">AC comfort for the Gala Dinner. Arpora legacy partner.</p>
+              <h4 className="text-lg font-bold mb-2 text-amber-500">Banquet Hall</h4>
+              <p className="text-stone-400 text-xs uppercase font-black tracking-widest">Gala Event Hub</p>
             </div>
           </div>
         </div>
+        {onUpdateRoomImage && (
+          <button 
+            onClick={() => triggerUpload("301", "Resort")} 
+            className="absolute bottom-8 right-8 bg-[#D4AF37] text-stone-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest"
+          >
+            <Camera size={18} /> Update Resort Photo
+          </button>
+        )}
       </section>
     </div>
   );
