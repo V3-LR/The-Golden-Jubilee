@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { Guest, FamilyMember } from '../types';
-import { Heart, CheckCircle, ArrowRight, Users, X, Plus, Trash2, ShieldCheck } from 'lucide-react';
+import { 
+  Heart, 
+  CheckCircle, 
+  ArrowRight, 
+  Users, 
+  X, 
+  Plus, 
+  Trash2, 
+  ShieldCheck, 
+  Utensils, 
+  Wine, 
+  Music, 
+  MessageSquare 
+} from 'lucide-react';
 
 interface RSVPFormProps {
   guest: Guest;
@@ -110,6 +123,7 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
             <Heart size={200} className="text-[#D4AF37]" />
           </div>
 
+          {/* Attendance Section */}
           <div className="space-y-8">
             <div className="flex items-center gap-4 border-b border-stone-100 pb-4">
                <ShieldCheck className="text-[#D4AF37]" size={24} />
@@ -130,6 +144,7 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
             </div>
           </div>
 
+          {/* Family Members Section */}
           <div className="space-y-8">
             <div className="flex items-center justify-between border-b border-stone-100 pb-4">
                <div className="flex items-center gap-4">
@@ -183,6 +198,79 @@ const RSVPForm: React.FC<RSVPFormProps> = ({ guest, onSubmit, onGoToDashboard, o
               {formData.familyMembers?.length === 0 && (
                 <p className="text-center text-stone-400 italic text-sm py-4">Are family members joining? Add them above!</p>
               )}
+            </div>
+          </div>
+
+          {/* Celebration Preferences Section */}
+          <div className="space-y-8 pt-4">
+            <div className="flex items-center gap-4 border-b border-stone-100 pb-4">
+               <Heart className="text-[#D4AF37]" size={24} />
+               <h3 className="text-2xl font-serif font-bold text-stone-900">Celebration Preferences</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Drink Preferences */}
+              <div className="space-y-4">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase text-stone-400 tracking-widest">
+                  <Wine size={14} className="text-[#D4AF37]" /> Refreshment Preference
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['Alcohol', 'Non-Alcohol', 'Both'] as const).map((pref) => (
+                    <button
+                      key={pref}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, drinksPreference: pref })}
+                      className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-tight border-2 transition-all ${
+                        formData.drinksPreference === pref ? 'bg-stone-900 border-stone-900 text-white shadow-md' : 'bg-white border-stone-100 text-stone-400 hover:border-[#D4AF37]/20'
+                      }`}
+                    >
+                      {pref}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dietary Requirements */}
+              <div className="space-y-4">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase text-stone-400 tracking-widest">
+                  <Utensils size={14} className="text-[#D4AF37]" /> Dietary Restrictions
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Nut allergy, Jain Food..."
+                  value={formData.allergies}
+                  onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
+                  className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4 text-sm font-bold text-stone-900 focus:outline-none focus:border-[#D4AF37]"
+                />
+              </div>
+            </div>
+
+            {/* Song Request */}
+            <div className="space-y-4">
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase text-stone-400 tracking-widest">
+                <Music size={14} className="text-[#D4AF37]" /> Dedicate a Song to Mummy & Papa
+              </label>
+              <input 
+                type="text" 
+                placeholder="Suggest a song for the Sangeet Night..."
+                value={formData.songRequest}
+                onChange={(e) => setFormData({ ...formData, songRequest: e.target.value })}
+                className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4 text-sm font-bold text-stone-900 focus:outline-none focus:border-[#D4AF37]"
+              />
+            </div>
+
+            {/* Personal Message */}
+            <div className="space-y-4">
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase text-stone-400 tracking-widest">
+                <MessageSquare size={14} className="text-[#D4AF37]" /> Heartfelt Message
+              </label>
+              <textarea 
+                rows={3}
+                placeholder="Share a memory or a wish for their 50th year..."
+                value={formData.personalMessage}
+                onChange={(e) => setFormData({ ...formData, personalMessage: e.target.value })}
+                className="w-full bg-stone-50 border border-stone-100 rounded-3xl px-5 py-5 text-sm font-bold text-stone-900 focus:outline-none focus:border-[#D4AF37] resize-none"
+              />
             </div>
           </div>
 

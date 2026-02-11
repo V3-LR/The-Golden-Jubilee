@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Guest, RoomDetail } from '../types';
-import { ITINERARY, ROOM_DATABASE } from '../constants';
+import { ITINERARY, ROOM_DATABASE, PROPERTY_LOCATIONS } from '../constants';
 import { 
   Calendar, MapPin, Shirt, Bed, Info, Clock, Heart,
-  ArrowRight, X, CheckCircle, MailOpen, UserCheck, Users
+  ArrowRight, X, CheckCircle, MailOpen, UserCheck, Users, Navigation
 } from 'lucide-react';
 import RSVPForm from './RSVPForm';
 
@@ -17,6 +17,10 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate }) => {
   const [isRSVPMode, setIsRSVPMode] = useState(false);
 
   const room = ROOM_DATABASE.find(r => r.roomNo === guest.roomNo && r.property === guest.property);
+  
+  const locationInfo = ['Villa-Pool', 'Villa-Hall', 'TreeHouse'].includes(guest.property) 
+    ? PROPERTY_LOCATIONS.FAMILY_ESTATE 
+    : PROPERTY_LOCATIONS.RESORT;
 
   if (isRSVPMode && onUpdate) {
     return (
@@ -104,9 +108,30 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate }) => {
                 {room.property} • Suite {room.roomNo}
               </div>
             </div>
-            <div className="lg:w-2/5 p-12 md:p-20 flex flex-col justify-center bg-[#FCFAF2]">
+            <div className="lg:w-2/5 p-12 md:p-16 flex flex-col justify-center bg-[#FCFAF2]">
               <h3 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-6">{room.title}</h3>
-              <p className="text-stone-500 text-xl mb-10 italic leading-relaxed">{room.description}</p>
+              <p className="text-stone-500 text-xl mb-8 italic leading-relaxed">{room.description}</p>
+              
+              <div className="bg-white p-6 rounded-[2rem] border border-[#D4AF37]/20 shadow-sm mb-10">
+                <div className="flex items-center gap-3 mb-3">
+                  <MapPin className="text-[#D4AF37]" size={20} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8860B]">Arrival & Drop-off</span>
+                </div>
+                <p className="text-stone-800 font-bold text-sm mb-4 leading-snug">
+                  {locationInfo.name}<br/>
+                  {locationInfo.address}
+                </p>
+                <a 
+                  href={locationInfo.mapLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-2 bg-[#D4AF37] text-stone-900 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:scale-105 transition-all"
+                >
+                  <Navigation size={14} /> Open in Maps
+                </a>
+              </div>
+
               <div className="grid grid-cols-1 gap-4">
                 {room.amenities.map((a, i) => (
                   <div key={i} className="flex items-center gap-4 text-stone-700 font-bold text-xs uppercase tracking-tight bg-white p-4 rounded-2xl border border-stone-100 shadow-sm">

@@ -3,8 +3,9 @@ import { Guest, UserRole } from '../types';
 import { 
   CheckCircle, Clock, Eye, X, Camera, Heart, Sun, Zap, 
   MessageCircle, Share2, ClipboardCheck, Link as LinkIcon,
-  Users as UsersIcon
+  Users as UsersIcon, MapPin
 } from 'lucide-react';
+import { PROPERTY_LOCATIONS } from '../constants';
 
 interface RSVPManagerProps {
   guests: Guest[];
@@ -41,6 +42,13 @@ Hum aapke aagman ki pratiksha karenge! 🧡`;
 
     const encodedText = encodeURIComponent(text);
     window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+  };
+
+  const getLocationInfo = (property: string) => {
+    if (['Villa-Pool', 'Villa-Hall', 'TreeHouse'].includes(property)) {
+      return PROPERTY_LOCATIONS.FAMILY_ESTATE;
+    }
+    return PROPERTY_LOCATIONS.RESORT;
   };
 
   return (
@@ -185,10 +193,18 @@ Hum aapke aagman ki pratiksha karenge! 🧡`;
                         <div className="w-12 h-12 bg-[#FEF9E7] rounded-2xl flex items-center justify-center text-[#B8860B]">
                            <Zap size={20} />
                         </div>
-                        <div>
+                        <div className="flex-grow">
                            <p className="text-[8px] font-black text-stone-400 uppercase">Your Stay</p>
-                           <p className="text-base font-bold text-stone-900">{selectedForCard.property}</p>
+                           <p className="text-base font-bold text-stone-900 leading-tight">{selectedForCard.property}</p>
                            <p className="text-[10px] font-black text-[#B8860B] uppercase">Room #{selectedForCard.roomNo}</p>
+                           {/* ADDRESS ADDED HERE */}
+                           <div className="mt-2 pt-2 border-t border-stone-50">
+                              <p className="text-[8px] font-black text-stone-400 uppercase mb-0.5">Drop-off Point</p>
+                              <p className="text-[10px] font-bold text-stone-800 leading-tight">
+                                 {getLocationInfo(selectedForCard.property).name}<br/>
+                                 {getLocationInfo(selectedForCard.property).address}
+                              </p>
+                           </div>
                         </div>
                      </div>
                      <div className="bg-white p-6 rounded-3xl border border-stone-100 flex items-center gap-5">
@@ -198,7 +214,7 @@ Hum aapke aagman ki pratiksha karenge! 🧡`;
                         <div>
                            <p className="text-[8px] font-black text-stone-400 uppercase">The Date</p>
                            <p className="text-base font-bold text-stone-900">April 17-18, 2026</p>
-                           <p className="text-[10px] font-black text-[#B8860B] uppercase">Arpora, Goa</p>
+                           <p className="text-[10px] font-black text-[#B8860B] uppercase">Arossim, Goa</p>
                         </div>
                      </div>
                   </div>
