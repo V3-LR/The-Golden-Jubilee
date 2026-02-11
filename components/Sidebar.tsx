@@ -14,7 +14,9 @@ import {
   Lock,
   MailCheck,
   LayoutDashboard,
-  LogOut
+  LogOut,
+  ListTodo,
+  Heart
 } from 'lucide-react';
 import { AppTab, UserRole } from '../types';
 import { EVENT_CONFIG } from '../constants';
@@ -37,10 +39,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
     { id: 'venue', label: 'Villa & Pool', icon: Map, plannerOnly: false },
     { id: 'rooms', label: 'Room Map', icon: Bed, plannerOnly: false },
     { id: 'meals', label: 'Meal Plan', icon: Utensils, plannerOnly: false },
+    { id: 'tasks', label: 'Task Matrix', icon: ListTodo, plannerOnly: true },
     { id: 'tree', label: 'Interactive Tree', icon: GitBranch, plannerOnly: false },
     { id: 'budget', label: 'Budget Tracker', icon: IndianRupee, plannerOnly: true },
     { id: 'ai', label: 'AI Assistant', icon: Sparkles, plannerOnly: true },
-    { id: 'portal', label: 'View Guest Invitation', icon: LayoutDashboard, plannerOnly: false },
+    { id: 'portal', label: 'View Invitation', icon: LayoutDashboard, plannerOnly: false },
   ];
 
   return (
@@ -54,17 +57,19 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-10 border-b border-[#D4AF37]/10 relative overflow-hidden group">
-          <Trees className="absolute -right-6 -bottom-6 text-[#D4AF37]/5 group-hover:scale-125 transition-transform duration-1000" size={120} />
-          <h1 className="text-2xl font-serif font-bold text-[#D4AF37] tracking-tight relative z-10">{EVENT_CONFIG.theme}</h1>
-          <p className="text-[10px] text-[#B8860B] mt-1 uppercase tracking-[0.3em] font-black relative z-10">
-            {isPlanner ? 'Royal Planner Hub' : 'Guest Preview'}
+          <Heart className="absolute -right-6 -bottom-6 text-[#D4AF37]/5 group-hover:scale-125 transition-transform duration-1000" size={120} />
+          <h1 className="text-xl font-serif font-bold text-[#D4AF37] tracking-tight relative z-10 leading-snug">
+            {EVENT_CONFIG.title}
+          </h1>
+          <p className="text-[9px] text-[#B8860B] mt-2 uppercase tracking-[0.3em] font-black relative z-10">
+            {isPlanner ? 'Organizer Hub' : 'Guest Preview'}
           </p>
           <button onClick={onClose} className="lg:hidden absolute top-6 right-6 text-[#D4AF37]/40 hover:text-[#D4AF37]">
             <X size={24} />
           </button>
         </div>
 
-        <nav className="p-4 space-y-2 flex-grow mt-6 overflow-y-auto no-scrollbar">
+        <nav className="p-4 space-y-1.5 flex-grow mt-6 overflow-y-auto no-scrollbar">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -85,7 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
               >
                 <div className="flex items-center gap-4">
                   <Icon size={18} className={isActive ? 'text-stone-900' : 'group-hover:scale-110 transition-transform'} />
-                  <span className="text-sm tracking-wide">{item.label}</span>
+                  <span className="text-[11px] font-black uppercase tracking-widest">{item.label}</span>
                 </div>
                 {isLocked && <Lock size={12} className="text-stone-800" />}
               </button>
@@ -94,16 +99,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
         </nav>
         
         <div className="p-6 space-y-3 mt-auto border-t border-[#D4AF37]/10 bg-black/20">
-          {isPlanner && (
-            <div className="p-4 bg-[#D4AF37]/5 text-[#D4AF37] rounded-2xl border border-[#D4AF37]/20 flex items-center justify-between">
-              <div className="text-left">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60">Session</p>
-                <p className="text-xs font-bold">Admin Active</p>
-              </div>
-              <Share2 size={16} className="animate-pulse" />
-            </div>
-          )}
-          
           <button 
             onClick={onLogout}
             className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 text-stone-500 hover:text-red-400 hover:bg-red-400/5 transition-all group"

@@ -3,7 +3,7 @@ import { Guest, RoomDetail, EventFunction } from '../types';
 import { PROPERTY_LOCATIONS } from '../constants';
 import { 
   Calendar, MapPin, Shirt, Bed, Info, Clock, Heart,
-  ArrowRight, X, CheckCircle, MailOpen, UserCheck, Users, Navigation, Camera
+  ArrowRight, X, CheckCircle, MailOpen, UserCheck, Users, Navigation, Camera, ShieldAlert, EyeOff
 } from 'lucide-react';
 import RSVPForm from './RSVPForm';
 
@@ -15,10 +15,10 @@ interface GuestPortalProps {
   onUpdateEventImage: (eventId: string, base64: string) => void;
   onUpdateRoomImage: (roomNo: string, property: string, base64: string) => void;
   isPlanner: boolean;
+  onBackToMaster?: () => void;
 }
 
-const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase, itinerary, onUpdateEventImage, onUpdateRoomImage, isPlanner }) => {
-  const [selectedRoom, setSelectedRoom] = useState<RoomDetail | null>(null);
+const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase, itinerary, onUpdateEventImage, onUpdateRoomImage, isPlanner, onBackToMaster }) => {
   const [isRSVPMode, setIsRSVPMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{type: 'event' | 'room', id: string} | null>(null);
@@ -55,6 +55,18 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
     <div className="space-y-12 pb-20 animate-in fade-in duration-700 min-h-screen">
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
       
+      {isPlanner && (
+        <div className="bg-stone-900 text-white p-5 rounded-[2.5rem] flex flex-col sm:flex-row items-center justify-between border-2 border-[#D4AF37] shadow-2xl mb-10 gap-4">
+          <div className="flex items-center gap-4">
+            <UserCheck className="text-[#D4AF37]" size={24} />
+            <p className="text-sm font-bold">Admin Preview Mode: <span className="text-[#D4AF37] font-black">{guest.name}</span></p>
+          </div>
+          <button onClick={onBackToMaster} className="bg-[#D4AF37] text-stone-900 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all">
+            <EyeOff size={16} /> Exit Preview
+          </button>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <div className="relative rounded-[3rem] md:rounded-[5rem] overflow-hidden shadow-2xl bg-white border-[12px] border-white min-h-[500px] flex items-center justify-center">
         <div className="absolute inset-0 opacity-[0.15] gold-shimmer glitter-overlay"></div>
@@ -65,6 +77,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
             <button onClick={() => setIsRSVPMode(true)} className="gold-shimmer text-stone-900 px-12 py-6 rounded-full font-black uppercase text-xs tracking-widest shadow-2xl flex items-center gap-4 mx-auto">
               Fill Family Details <ArrowRight size={20} />
             </button>
+          )}
+          {guest.status === 'Confirmed' && (
+            <div className="bg-green-50 text-green-600 px-10 py-5 rounded-full inline-flex items-center gap-3 font-black uppercase tracking-widest text-[11px] border border-green-100">
+               <CheckCircle size={20} /> RSVP Confirmed
+            </div>
           )}
         </div>
       </div>
@@ -83,6 +100,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
               )}
             </div>
             <div className="lg:w-2/5 p-12 md:p-16 flex flex-col justify-center bg-[#FCFAF2]">
+              <span className="text-[#B8860B] font-black text-[10px] uppercase tracking-[0.4em] mb-4">Confirmed Suite</span>
               <h3 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-6">{room.title}</h3>
               <div className="bg-white p-6 rounded-3xl border border-[#D4AF37]/20 shadow-sm mb-10">
                 <p className="text-stone-800 font-bold text-sm leading-snug">{locationInfo.name}<br/>{locationInfo.address}</p>
@@ -103,13 +121,17 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
                 <div className="flex items-center gap-3 text-[#D4AF37]"><Clock size={20} /><span className="text-[12px] font-black uppercase tracking-[0.4em]">{event.time}</span></div>
                 {isPlanner && (
                   <button onClick={(e) => triggerUpload(e, 'event', event.id)} className="p-3 bg-stone-900 text-[#D4AF37] rounded-full shadow-lg z-[10000] flex items-center gap-2 px-5 py-2">
-                    <Camera size={16} /> <span className="text-[9px] font-black uppercase">Edit Event Photo</span>
+                    <Camera size={16} /> <span className="text-[9px] font-black uppercase">Edit Photo</span>
                   </button>
                 )}
               </div>
               <h3 className="text-3xl font-serif font-bold text-stone-900">{event.title}</h3>
               <div className="h-40 rounded-3xl overflow-hidden border border-stone-50"><img src={event.image} className="w-full h-full object-cover" alt={event.title} /></div>
               <p className="text-stone-500 text-lg italic leading-relaxed">"{event.description}"</p>
+              <div className="pt-6 border-t border-stone-50">
+                 <p className="text-[9px] font-black uppercase tracking-widest text-[#B8860B] mb-1">Location & Dress Code</p>
+                 <p className="text-sm font-bold text-stone-900">{event.location} • {event.dressCode}</p>
+              </div>
             </div>
           ))}
         </div>

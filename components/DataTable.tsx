@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Guest } from '../types';
-import { Edit3 } from 'lucide-react';
+import { Edit3, Lock } from 'lucide-react';
 
 interface DataTableProps {
   guests: Guest[];
@@ -31,7 +31,6 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
   };
 
   const getStatusLabel = (status: string) => {
-    // Explicitly show 'Coming' for confirmed guests to match user request
     return status === 'Confirmed' ? 'Coming' : status;
   };
 
@@ -92,12 +91,14 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
                           )}
                         </div>
                       ) : (
-                        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${
-                          col.key === 'status' ? getStatusColor(String(guest.status)) : 
-                          col.key === 'side' ? getSideColor(String(guest.side)) : 'text-stone-900 border-transparent'
-                        }`}>
-                          {col.key === 'status' ? getStatusLabel(String(guest[col.key as keyof Guest] || '-')) : String(guest[col.key as keyof Guest] || '-')}
-                        </span>
+                        <div className="flex items-center gap-3">
+                           <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${
+                            col.key === 'status' ? getStatusColor(String(guest.status)) : 
+                            col.key === 'side' ? getSideColor(String(guest.side)) : 'text-stone-900 border-stone-50 bg-stone-50'
+                          }`}>
+                            {col.key === 'status' ? getStatusLabel(String(guest[col.key as keyof Guest] || '-')) : String(guest[col.key as keyof Guest] || '-')}
+                          </span>
+                        </div>
                       )}
                     </td>
                   ))}

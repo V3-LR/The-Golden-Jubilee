@@ -1,6 +1,8 @@
 export type PropertyType = 'Villa-Pool' | 'Villa-Hall' | 'Resort' | 'TreeHouse';
 export type UserRole = 'planner' | 'guest' | null;
 export type FamilySide = 'Ladkiwale' | 'Ladkewale' | 'Common';
+export type TaskOwner = 'Husband' | 'Brother' | 'Planner' | 'TBD';
+export type EffortLevel = 'Low' | 'Medium' | 'High';
 
 export interface EventFunction {
   id: string;
@@ -35,7 +37,6 @@ export interface Guest {
     lunch17: string;
     dinner18: string;
   };
-  // RSVP Fields
   paxCount?: number;
   familyMembers?: FamilyMember[];
   allergies?: string;
@@ -59,6 +60,14 @@ export interface RoomDetail {
   amenities: string[];
 }
 
+export interface BudgetItem {
+  id: string;
+  label: string;
+  cost: number;
+  category: 'Committed' | 'Wishlist';
+  lead: TaskOwner;
+}
+
 export interface Budget {
   totalBudget: number;
   villaRate: number;
@@ -71,9 +80,23 @@ export interface Budget {
   bartenderRate: number;
   accessoriesRate: number;
   finalCateringPax: number;
+  finalizedVendors: string[];
+  committedSpend: number;
+  wishlistItems: BudgetItem[];
+  selectedPath: 'Villa' | 'Resort' | 'TBD';
 }
 
-// Added missing Quotation interface to resolve build errors in constants.tsx and BudgetTracker.tsx
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  owner: TaskOwner;
+  status: 'Pending' | 'In Progress' | 'Completed';
+  category: 'Catering' | 'Decor' | 'Logistics' | 'Ceremony';
+  vendorRef?: string;
+  cost?: number;
+}
+
 export interface Quotation {
   vendorName: string;
   contactPerson: string;
@@ -86,6 +109,7 @@ export interface Quotation {
   roomRate: number;
   extraPax: number;
   menuHighlights: string[];
+  effortScore: EffortLevel;
 }
 
-export type AppTab = 'master' | 'venue' | 'rooms' | 'meals' | 'sangeet' | 'tree' | 'budget' | 'ai' | 'rsvp-manager' | 'rsvp-form' | 'portal' | 'deployment';
+export type AppTab = 'master' | 'venue' | 'rooms' | 'meals' | 'tasks' | 'tree' | 'budget' | 'ai' | 'rsvp-manager' | 'portal';
