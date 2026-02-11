@@ -18,34 +18,52 @@ const MEDIA_KEY_ROOMS = 'ESTATE_PLANNER_ROOMS_V1';
 const MEDIA_KEY_EVENTS = 'ESTATE_PLANNER_EVENTS_V1';
 const SESSION_KEY = 'ESTATE_PLANNER_SESSION_STABLE';
 
+/**
+ * Image Compression Utility
+ * Prevents "Blank Image" bug by staying within localStorage 5MB quota
+ */
+const compressImage = (base64Str: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 1200;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_WIDTH) {
+        height *= MAX_WIDTH / width;
+        width = MAX_WIDTH;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality JPEG
+    };
+  });
+};
+
 const App: React.FC = () => {
   const [saveIndicator, setSaveIndicator] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // 1. STATEFUL DATA (GUESTS, ROOMS, EVENTS)
   const [guests, setGuests] = useState<Guest[]>(() => {
     const saved = localStorage.getItem(STABLE_KEY);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return INITIAL_GUESTS; }
-    }
-    return INITIAL_GUESTS;
+    try { return saved ? JSON.parse(saved) : INITIAL_GUESTS; } catch (e) { return INITIAL_GUESTS; }
   });
 
   const [rooms, setRooms] = useState<RoomDetail[]>(() => {
     const saved = localStorage.getItem(MEDIA_KEY_ROOMS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return STATIC_ROOMS; }
-    }
-    return STATIC_ROOMS;
+    try { return saved ? JSON.parse(saved) : STATIC_ROOMS; } catch (e) { return STATIC_ROOMS; }
   });
 
   const [itinerary, setItinerary] = useState<EventFunction[]>(() => {
     const saved = localStorage.getItem(MEDIA_KEY_EVENTS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return STATIC_ITINERARY; }
-    }
-    return STATIC_ITINERARY;
+    try { return saved ? JSON.parse(saved) : STATIC_ITINERARY; } catch (e) { return STATIC_ITINERARY; }
   });
 
   const deferredGuests = useDeferredValue(guests);
@@ -68,7 +86,6 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [budget, setBudget] = useState<Budget>(INITIAL_BUDGET);
 
-  // 2. PERSISTENCE EFFECTS
   useEffect(() => {
     if (userRole) {
       localStorage.setItem(SESSION_KEY, JSON.stringify({ role: userRole, guestId: activeGuestId, lastTab: activeTab }));
@@ -79,19 +96,24 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem(MEDIA_KEY_ROOMS, JSON.stringify(rooms)); }, [rooms]);
   useEffect(() => { localStorage.setItem(MEDIA_KEY_EVENTS, JSON.stringify(itinerary)); }, [itinerary]);
 
-  // 3. MASTER HANDLERS
   const handleUpdateGuest = useCallback((id: string, updates: Partial<Guest>) => {
     setIsSyncing(true);
     setGuests((prev) => prev.map((g) => (g.id === id ? { ...g, ...updates } : g)));
     setTimeout(() => setIsSyncing(false), 200);
   }, []);
 
-  const handleUpdateRoomImage = (roomNo: string, property: string, newImage: string) => {
-    setRooms(prev => prev.map(r => (r.roomNo === roomNo && r.property === property) ? { ...r, image: newImage } : r));
+  const handleUpdateRoomImage = async (roomNo: string, property: string, newImage: string) => {
+    setIsSyncing(true);
+    const optimized = await compressImage(newImage);
+    setRooms(prev => prev.map(r => (r.roomNo === roomNo && r.property === property) ? { ...r, image: optimized } : r));
+    setTimeout(() => setIsSyncing(false), 200);
   };
 
-  const handleUpdateEventImage = (eventId: string, newImage: string) => {
-    setItinerary(prev => prev.map(e => e.id === eventId ? { ...e, image: newImage } : e));
+  const handleUpdateEventImage = async (eventId: string, newImage: string) => {
+    setIsSyncing(true);
+    const optimized = await compressImage(newImage);
+    setItinerary(prev => prev.map(e => e.id === eventId ? { ...e, image: optimized } : e));
+    setTimeout(() => setIsSyncing(false), 200);
   };
 
   const handleTabChange = useCallback((tab: AppTab) => {
@@ -107,6 +129,24 @@ const App: React.FC = () => {
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = window.location.origin + window.location.pathname;
+  };
+
+  const handleAddGuest = () => {
+    const newGuest: Guest = {
+      id: `g-${Date.now()}`,
+      name: 'New Honored Guest',
+      category: 'Friend',
+      side: 'Common',
+      property: 'Resort',
+      roomNo: 'TBD',
+      status: 'Pending',
+      dietaryNote: 'Standard',
+      sangeetAct: 'TBD',
+      pickupScheduled: false,
+      dressCode: 'Indo-Western Glitz',
+      mealPlan: { lunch17: 'TBD', dinner18: 'TBD' }
+    };
+    setGuests(prev => [newGuest, ...prev]);
   };
 
   const forceSync = () => {
@@ -156,11 +196,9 @@ const App: React.FC = () => {
       return (
         <div className="space-y-10">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
-            <div className="space-y-2">
-              <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master List</h2>
-            </div>
+            <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master List</h2>
             {userRole === 'planner' && (
-              <button onClick={() => setGuests(p => [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Resort', roomNo: 'TBD', status: 'Pending', mealPlan: { lunch17: '', dinner18: '' }, dressCode: '' }, ...p])} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl">
+              <button onClick={handleAddGuest} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl">
                 <UserPlus size={18} /> New Entry
               </button>
             )}
