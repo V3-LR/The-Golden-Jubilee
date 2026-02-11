@@ -4,11 +4,12 @@ import { PROPERTY_LOCATIONS } from '../constants';
 import { RoomDetail } from '../types';
 
 interface VenueOverviewProps {
-  onUpdateRoomImage?: (roomNo: string, property: string, base64: string) => void;
+  onUpdateRoomImage: (roomNo: string, property: string, base64: string) => void;
   rooms: RoomDetail[];
+  isPlanner: boolean;
 }
 
-const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms }) => {
+const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms, isPlanner }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{roomNo: string, property: string} | null>(null);
 
@@ -18,7 +19,7 @@ const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && uploadTarget && onUpdateRoomImage) {
+    if (file && uploadTarget) {
       const reader = new FileReader();
       reader.onloadend = () => {
         onUpdateRoomImage(uploadTarget.roomNo, uploadTarget.property, reader.result as string);
@@ -38,25 +39,25 @@ const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms 
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
       
       {/* Property 1: Poolside Villa */}
-      <section className="space-y-6">
-        <div className="relative h-[300px] md:h-[550px] rounded-[2rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl group border-4 md:border-8 border-white">
+      <section className="space-y-6 relative">
+        <div className="relative h-[300px] md:h-[550px] rounded-[2rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl border-4 md:border-8 border-white bg-stone-100">
           <img src={getRoomImg("101", "Villa-Pool", "https://images.unsplash.com/photo-1628592102751-ba83b03bc42e?auto=format&fit=crop&q=80")} className="w-full h-full object-cover" alt="Villa A" />
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-900/95 via-stone-900/10 to-transparent flex items-end p-6 md:p-16">
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-900/90 via-stone-900/10 to-transparent flex items-end p-6 md:p-16 pointer-events-none">
             <div className="max-w-2xl">
               <span className="bg-amber-500 text-stone-900 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-4 inline-block">Estate Hub</span>
-              <h2 className="text-3xl md:text-6xl font-serif font-bold text-white mb-2 leading-tight">Villa A: Poolside</h2>
+              <h2 className="text-3xl md:text-6xl font-serif font-bold text-white mb-2 leading-tight text-shadow-lg">Villa A: Poolside</h2>
               <div className="flex items-center gap-3 text-stone-300">
                 <MapPin size={16} className="text-amber-500" />
                 <span className="text-xs md:text-sm font-bold uppercase tracking-widest">{PROPERTY_LOCATIONS.FAMILY_ESTATE.name}</span>
               </div>
             </div>
           </div>
-          {onUpdateRoomImage && (
+          {isPlanner && (
             <button 
               onClick={() => triggerUpload("101", "Villa-Pool")} 
-              className="absolute top-8 right-8 bg-white text-stone-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-black text-[10px] uppercase tracking-widest border-4 border-[#D4AF37] hover:scale-110 transition-all z-20"
+              className="absolute top-8 right-8 bg-white text-stone-900 px-6 py-4 rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex items-center gap-3 font-black text-[11px] uppercase tracking-widest border-4 border-[#D4AF37] hover:scale-110 active:scale-95 transition-all z-[10000]"
             >
-              <Camera size={18} className="text-[#D4AF37]" /> Edit Banner
+              <Camera size={20} className="text-[#D4AF37]" /> Change Main Image
             </button>
           )}
         </div>
@@ -64,14 +65,14 @@ const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms 
 
       {/* Property 2: Red Hall Villa */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 items-stretch">
-        <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-xl min-h-[400px] group border-4 border-white">
+        <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-xl min-h-[400px] border-4 border-white bg-stone-100">
           <img src={getRoomImg("201", "Villa-Hall", "https://images.unsplash.com/photo-1523217582562-09d0def993a6?auto=format&fit=crop&q=80")} className="w-full h-full object-cover" alt="Villa B" />
-          {onUpdateRoomImage && (
+          {isPlanner && (
             <button 
               onClick={() => triggerUpload("201", "Villa-Hall")} 
-              className="absolute top-6 right-6 bg-white text-stone-900 px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 font-black text-[9px] uppercase tracking-widest border-2 border-[#D4AF37] z-20"
+              className="absolute top-6 right-6 bg-white text-stone-900 px-5 py-3 rounded-full shadow-2xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest border-2 border-[#D4AF37] hover:scale-105 transition-all z-[10000]"
             >
-              <Edit2 size={14} className="text-[#D4AF37]" /> Edit View
+              <Edit2 size={16} className="text-[#D4AF37]" /> Update View
             </button>
           )}
         </div>
@@ -103,17 +104,17 @@ const VenueOverview: React.FC<VenueOverviewProps> = ({ onUpdateRoomImage, rooms 
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-8 bg-stone-800/50 rounded-[2rem] border border-stone-700">
-              <h4 className="text-lg font-bold mb-2 text-amber-500">Banquet Hall</h4>
+              <h4 className="text-lg font-bold mb-2 text-amber-500">Ballroom</h4>
               <p className="text-stone-400 text-xs uppercase font-black tracking-widest">Gala Event Hub</p>
             </div>
           </div>
         </div>
-        {onUpdateRoomImage && (
+        {isPlanner && (
           <button 
             onClick={() => triggerUpload("301", "Resort")} 
-            className="absolute bottom-8 right-8 bg-[#D4AF37] text-stone-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest"
+            className="absolute bottom-8 right-8 bg-[#D4AF37] text-stone-900 px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 font-black text-[11px] uppercase tracking-widest border-2 border-white z-[10000]"
           >
-            <Camera size={18} /> Update Resort Photo
+            <Camera size={20} /> Update Resort Photo
           </button>
         )}
       </section>

@@ -5,10 +5,11 @@ import { Users, Bed, CheckCircle2, Circle, Home, Building2, Hotel, TreePine, Cam
 interface RoomMapProps {
   guests: Guest[];
   rooms: RoomDetail[];
-  onUpdateImage?: (roomNo: string, property: string, base64: string) => void;
+  onUpdateImage: (roomNo: string, property: string, base64: string) => void;
+  isPlanner: boolean;
 }
 
-const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage }) => {
+const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlanner }) => {
   const [selectedRoom, setSelectedRoom] = useState<RoomDetail | null>(null);
   const [filter, setFilter] = useState<PropertyType | 'All'>('All');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,7 +28,7 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage }) => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && pendingUploadRoom && onUpdateImage) {
+    if (file && pendingUploadRoom) {
       const reader = new FileReader();
       reader.onloadend = () => {
         onUpdateImage(pendingUploadRoom.roomNo, pendingUploadRoom.property, reader.result as string);
@@ -50,9 +51,9 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage }) => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <h2 className="text-4xl font-serif font-bold text-stone-900">Property Occupancy</h2>
-          <p className="text-stone-500 italic text-lg">Managing 2 Villas, Resort, and TreeHouse bookings.</p>
+          <p className="text-stone-500 italic text-lg">Managing Estate, Resort, and TreeHouse bookings.</p>
         </div>
-        <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200 overflow-x-auto max-w-full">
+        <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200 overflow-x-auto max-w-full no-scrollbar">
           {(['All', 'Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] as const).map((prop) => (
             <button
               key={prop}
@@ -79,17 +80,17 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage }) => {
               className="bg-white rounded-3xl overflow-hidden border border-stone-200 shadow-sm hover:shadow-2xl transition-all cursor-pointer group flex flex-col h-full relative"
               onClick={() => setSelectedRoom(room)}
             >
-              <div className="relative h-48 overflow-hidden">
+              <div className="relative h-48 overflow-hidden bg-stone-50">
                 <img src={room.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={room.title} />
-                <div className="absolute top-4 left-4 bg-stone-900/90 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2">
+                <div className="absolute top-4 left-4 bg-stone-900/90 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 z-10">
                   <Icon size={12} className="text-amber-500" /> {room.property} #{room.roomNo}
                 </div>
-                {onUpdateImage && (
+                {isPlanner && (
                   <button 
                     onClick={(e) => triggerUpload(e, room)}
-                    className="absolute bottom-4 right-4 bg-white text-stone-900 px-3 py-2 rounded-full border-2 border-[#D4AF37] shadow-xl flex items-center gap-2 font-black text-[9px] uppercase tracking-widest hover:scale-105 transition-all"
+                    className="absolute bottom-4 right-4 bg-[#D4AF37] text-stone-900 px-4 py-2.5 rounded-full border-2 border-white shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex items-center gap-2 font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all z-[10000]"
                   >
-                    <Camera size={14} className="text-[#D4AF37]" /> Edit
+                    <Camera size={14} /> Edit Room Photo
                   </button>
                 )}
               </div>
@@ -109,7 +110,7 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage }) => {
       </div>
 
       {selectedRoom && (
-        <div className="fixed inset-0 bg-stone-900/95 z-50 flex items-center justify-center p-4" onClick={() => setSelectedRoom(null)}>
+        <div className="fixed inset-0 bg-stone-900/95 z-[500] flex items-center justify-center p-4" onClick={() => setSelectedRoom(null)}>
           <div className="bg-white rounded-[2.5rem] max-w-4xl w-full overflow-hidden flex flex-col md:flex-row animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
             <div className="md:w-1/2 h-64 md:h-auto">
               <img src={selectedRoom.image} className="w-full h-full object-cover" alt={selectedRoom.title} />
@@ -125,6 +126,9 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage }) => {
                         {g.name}
                       </div>
                     ))}
+                    {guests.filter(g => g.roomNo === selectedRoom.roomNo && g.property === selectedRoom.property).length === 0 && (
+                      <p className="text-xs text-stone-400 italic">No guests assigned to this room yet.</p>
+                    )}
                   </div>
                 </div>
                 <button onClick={() => setSelectedRoom(null)} className="w-full py-4 bg-stone-900 text-white rounded-2xl font-bold uppercase text-xs tracking-widest">Close</button>

@@ -11,16 +11,16 @@ import RoomMap from './components/RoomMap';
 import Login from './components/Login';
 import RSVPManager from './components/RSVPManager';
 import GuestPortal from './components/GuestPortal';
-import { Menu, ShieldCheck, UserPlus, EyeOff, CheckCircle, RefreshCw, Camera, Download } from 'lucide-react';
+import { Menu, ShieldCheck, UserPlus, EyeOff, CheckCircle, RefreshCw, Camera, Download, AlertTriangle, Hammer } from 'lucide-react';
 
-const STABLE_KEY = 'ESTATE_PLANNER_STABLE_V4';
-const MEDIA_KEY_ROOMS = 'ESTATE_PLANNER_ROOMS_V4';
-const MEDIA_KEY_EVENTS = 'ESTATE_PLANNER_EVENTS_V4';
-const SESSION_KEY = 'ESTATE_PLANNER_SESSION_V4';
+const STABLE_KEY = 'ESTATE_PLANNER_STABLE_V6';
+const MEDIA_KEY_ROOMS = 'ESTATE_PLANNER_ROOMS_V6';
+const MEDIA_KEY_EVENTS = 'ESTATE_PLANNER_EVENTS_V6';
+const SESSION_KEY = 'ESTATE_PLANNER_SESSION_V6';
 
 /**
- * Aggressive Image Compression Utility
- * Resizes images to 800px width and 0.6 quality to ensure stay within 5MB LocalStorage limit
+ * Ultra-Aggressive Image Compression
+ * Downscales to 600px and 0.5 quality to ensure we NEVER hit the 5MB quota
  */
 const compressImage = (base64Str: string): Promise<string> => {
   return new Promise((resolve) => {
@@ -28,7 +28,7 @@ const compressImage = (base64Str: string): Promise<string> => {
     img.src = base64Str;
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 800; // Aggressive downsizing for storage
+      const MAX_WIDTH = 600; 
       let width = img.width;
       let height = img.height;
 
@@ -40,9 +40,14 @@ const compressImage = (base64Str: string): Promise<string> => {
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.6)); // High compression
+      if (ctx) {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+      }
+      resolve(canvas.toDataURL('image/jpeg', 0.5)); 
     };
+    img.onerror = () => resolve(base64Str);
   });
 };
 
@@ -50,6 +55,7 @@ const App: React.FC = () => {
   const [saveIndicator, setSaveIndicator] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const [guests, setGuests] = useState<Guest[]>(() => {
     const saved = localStorage.getItem(STABLE_KEY);
@@ -86,21 +92,30 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [budget, setBudget] = useState<Budget>(INITIAL_BUDGET);
 
-  // Persistence hooks
+  const isPlanner = userRole === 'planner';
+
+  // Safe Save Wrapper
+  const safeSave = (key: string, value: any) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      setError("Browser storage is full! Please use fewer/smaller custom images.");
+      console.error("Storage error:", e);
+    }
+  };
+
   useEffect(() => {
     if (userRole) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ role: userRole, guestId: activeGuestId, lastTab: activeTab }));
+      safeSave(SESSION_KEY, { role: userRole, guestId: activeGuestId, lastTab: activeTab });
     }
   }, [userRole, activeGuestId, activeTab]);
 
-  useEffect(() => { localStorage.setItem(STABLE_KEY, JSON.stringify(guests)); }, [guests]);
-  useEffect(() => { localStorage.setItem(MEDIA_KEY_ROOMS, JSON.stringify(rooms)); }, [rooms]);
-  useEffect(() => { localStorage.setItem(MEDIA_KEY_EVENTS, JSON.stringify(itinerary)); }, [itinerary]);
+  useEffect(() => { safeSave(STABLE_KEY, guests); }, [guests]);
+  useEffect(() => { safeSave(MEDIA_KEY_ROOMS, rooms); }, [rooms]);
+  useEffect(() => { safeSave(MEDIA_KEY_EVENTS, itinerary); }, [itinerary]);
 
   const handleUpdateGuest = useCallback((id: string, updates: Partial<Guest>) => {
-    setIsSyncing(true);
     setGuests((prev) => prev.map((g) => (g.id === id ? { ...g, ...updates } : g)));
-    setTimeout(() => setIsSyncing(false), 200);
   }, []);
 
   const handleUpdateRoomImage = async (roomNo: string, property: string, newImage: string) => {
@@ -108,7 +123,7 @@ const App: React.FC = () => {
     const optimized = await compressImage(newImage);
     setRooms(prev => prev.map(r => (r.roomNo === roomNo && r.property === property) ? { ...r, image: optimized } : r));
     setSaveIndicator(true);
-    setTimeout(() => { setIsSyncing(false); setSaveIndicator(false); }, 1000);
+    setTimeout(() => { setIsSyncing(false); setSaveIndicator(false); }, 800);
   };
 
   const handleUpdateEventImage = async (eventId: string, newImage: string) => {
@@ -116,7 +131,7 @@ const App: React.FC = () => {
     const optimized = await compressImage(newImage);
     setItinerary(prev => prev.map(e => e.id === eventId ? { ...e, image: optimized } : e));
     setSaveIndicator(true);
-    setTimeout(() => { setIsSyncing(false); setSaveIndicator(false); }, 1000);
+    setTimeout(() => { setIsSyncing(false); setSaveIndicator(false); }, 800);
   };
 
   const handleTabChange = useCallback((tab: AppTab) => {
@@ -134,16 +149,6 @@ const App: React.FC = () => {
     window.location.reload();
   };
 
-  const exportPlan = () => {
-    const data = { guests, rooms, itinerary, budget };
-    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Golden-Jubilee-Plan-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-  };
-
   if (!userRole) {
     return <Login onLogin={(role, guestId) => {
       setUserRole(role);
@@ -158,14 +163,14 @@ const App: React.FC = () => {
     if (activeTab === 'portal') {
       return (
         <div className="space-y-4">
-          {userRole === 'planner' && (
+          {isPlanner && (
             <div className="bg-stone-900 text-white p-5 rounded-[2.5rem] flex flex-col sm:flex-row items-center justify-between border-2 border-[#D4AF37] shadow-2xl mb-10 gap-4">
               <div className="flex items-center gap-4">
                 <ShieldCheck className="text-[#D4AF37]" size={24} />
-                <p className="text-sm font-bold">Impersonating Guest: <span className="text-[#D4AF37]">{currentGuest.name}</span></p>
+                <p className="text-sm font-bold">Previewing as: <span className="text-[#D4AF37]">{currentGuest.name}</span></p>
               </div>
               <button onClick={() => handleTabChange('master')} className="bg-[#D4AF37] text-stone-900 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                <EyeOff size={16} /> Close Preview
+                <EyeOff size={16} /> Exit Preview
               </button>
             </div>
           )}
@@ -174,8 +179,9 @@ const App: React.FC = () => {
             onUpdate={handleUpdateGuest} 
             roomDatabase={rooms}
             itinerary={itinerary}
-            onUpdateEventImage={userRole === 'planner' ? handleUpdateEventImage : undefined}
-            onUpdateRoomImage={userRole === 'planner' ? handleUpdateRoomImage : undefined}
+            isPlanner={isPlanner}
+            onUpdateEventImage={handleUpdateEventImage}
+            onUpdateRoomImage={handleUpdateRoomImage}
           />
         </div>
       );
@@ -186,7 +192,7 @@ const App: React.FC = () => {
         <div className="space-y-10">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
             <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master List</h2>
-            {userRole === 'planner' && (
+            {isPlanner && (
               <button onClick={() => setGuests(p => [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Resort', roomNo: 'TBD', status: 'Pending', mealPlan: { lunch17: '', dinner18: '' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...p])} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl">
                 <UserPlus size={18} /> New Entry
               </button>
@@ -196,11 +202,11 @@ const App: React.FC = () => {
             guests={deferredGuests} 
             onUpdate={handleUpdateGuest}
             columns={[
-              { key: 'name', label: 'HONORED NAME', editable: userRole === 'planner' },
-              { key: 'side', label: 'SIDE', editable: userRole === 'planner', type: 'select', options: ['Ladkiwale', 'Ladkewale', 'Common'] },
-              { key: 'property', label: 'STAY', editable: userRole === 'planner', type: 'select', options: ['Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] },
-              { key: 'roomNo', label: 'ROOM #', editable: userRole === 'planner' },
-              { key: 'status', label: 'STATUS', editable: userRole === 'planner', type: 'select', options: ['Confirmed', 'Pending', 'Declined'] },
+              { key: 'name', label: 'HONORED NAME', editable: isPlanner },
+              { key: 'side', label: 'SIDE', editable: isPlanner, type: 'select', options: ['Ladkiwale', 'Ladkewale', 'Common'] },
+              { key: 'property', label: 'STAY', editable: isPlanner, type: 'select', options: ['Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] },
+              { key: 'roomNo', label: 'ROOM #', editable: isPlanner },
+              { key: 'status', label: 'STATUS', editable: isPlanner, type: 'select', options: ['Confirmed', 'Pending', 'Declined'] },
             ]}
           />
         </div>
@@ -208,10 +214,10 @@ const App: React.FC = () => {
     }
 
     if (activeTab === 'rsvp-manager') return <RSVPManager guests={deferredGuests} onUpdate={handleUpdateGuest} role={userRole} onTeleport={handleTeleport} />;
-    if (activeTab === 'venue') return <VenueOverview onUpdateRoomImage={userRole === 'planner' ? handleUpdateRoomImage : undefined} rooms={rooms} />;
-    if (activeTab === 'rooms') return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={userRole === 'planner' ? handleUpdateRoomImage : undefined} />;
+    if (activeTab === 'venue') return <VenueOverview onUpdateRoomImage={handleUpdateRoomImage} rooms={rooms} isPlanner={isPlanner} />;
+    if (activeTab === 'rooms') return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={handleUpdateRoomImage} isPlanner={isPlanner} />;
     if (activeTab === 'tree') return <TreeView guests={deferredGuests} />;
-    if (activeTab === 'budget') return <BudgetTracker budget={budget} onUpdateBudget={(u) => setBudget(p => ({...p, ...u}))} guests={deferredGuests} isPlanner={userRole === 'planner'} />;
+    if (activeTab === 'budget') return <BudgetTracker budget={budget} onUpdateBudget={(u) => setBudget(p => ({...p, ...u}))} guests={deferredGuests} isPlanner={isPlanner} />;
     if (activeTab === 'ai') return <AIPlanner guests={deferredGuests} />;
 
     return <div className="p-20 text-center font-serif text-stone-400">Loading...</div>;
@@ -224,19 +230,29 @@ const App: React.FC = () => {
       {!isStrictGuest && <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} role={userRole} onLogout={handleLogout} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />}
       <main className={`flex-grow min-h-screen w-full transition-all ${!isStrictGuest ? 'lg:ml-64' : ''}`}>
         {!isStrictGuest && (
-          <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[40] border-b border-[#D4AF37]/10">
+          <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[100] border-b border-[#D4AF37]/10">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={24} /></button>
             <div className="hidden md:block">
               <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Estate Sync Online</p>
               <h1 className="text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h1>
             </div>
             <div className="flex items-center gap-3">
-              {userRole === 'planner' && (
-                <button onClick={exportPlan} className="bg-white border-2 border-stone-100 text-stone-600 px-6 py-3 rounded-full text-[10px] font-black uppercase flex items-center gap-2 hover:border-[#D4AF37]">
-                  <Download size={16} /> Global Snapshot
-                </button>
+              {isPlanner && (
+                <div className="flex items-center gap-2 bg-[#D4AF37] text-stone-900 px-4 py-2 rounded-full shadow-md mr-2">
+                   <Hammer size={14} />
+                   <span className="text-[9px] font-black uppercase tracking-widest">Master Planner Mode</span>
+                </div>
               )}
-              {saveIndicator ? <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-in zoom-in"><CheckCircle size={16} className="text-[#D4AF37]" /> <span className="text-[10px] font-black uppercase">Saved</span></div> : <div className="flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 opacity-50"><RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> <span className="text-[10px] font-black uppercase">Live</span></div>}
+              {error && (
+                <div className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-full text-[9px] font-black uppercase">
+                  <AlertTriangle size={14} /> Storage Full
+                </div>
+              )}
+              {saveIndicator ? (
+                <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full"><CheckCircle size={16} className="text-[#D4AF37]" /> <span className="text-[10px] font-black uppercase">Saved</span></div>
+              ) : (
+                <div className="flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 opacity-50"><RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> <span className="text-[10px] font-black uppercase">Live Sync</span></div>
+              )}
             </div>
           </header>
         )}

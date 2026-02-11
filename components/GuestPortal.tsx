@@ -11,12 +11,13 @@ interface GuestPortalProps {
   guest: Guest;
   roomDatabase: RoomDetail[];
   itinerary: EventFunction[];
-  onUpdate?: (id: string, updates: Partial<Guest>) => void;
-  onUpdateEventImage?: (eventId: string, base64: string) => void;
-  onUpdateRoomImage?: (roomNo: string, property: string, base64: string) => void;
+  onUpdate: (id: string, updates: Partial<Guest>) => void;
+  onUpdateEventImage: (eventId: string, base64: string) => void;
+  onUpdateRoomImage: (roomNo: string, property: string, base64: string) => void;
+  isPlanner: boolean;
 }
 
-const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase, itinerary, onUpdateEventImage, onUpdateRoomImage }) => {
+const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase, itinerary, onUpdateEventImage, onUpdateRoomImage, isPlanner }) => {
   const [selectedRoom, setSelectedRoom] = useState<RoomDetail | null>(null);
   const [isRSVPMode, setIsRSVPMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,8 +31,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
     if (file && uploadTarget) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        if (uploadTarget.type === 'event' && onUpdateEventImage) onUpdateEventImage(uploadTarget.id, reader.result as string);
-        if (uploadTarget.type === 'room' && onUpdateRoomImage && room) onUpdateRoomImage(room.roomNo, room.property, reader.result as string);
+        if (uploadTarget.type === 'event') onUpdateEventImage(uploadTarget.id, reader.result as string);
+        if (uploadTarget.type === 'room' && room) onUpdateRoomImage(room.roomNo, room.property, reader.result as string);
         setUploadTarget(null);
       };
       reader.readAsDataURL(file);
@@ -44,7 +45,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
     fileInputRef.current?.click();
   };
 
-  if (isRSVPMode && onUpdate) {
+  if (isRSVPMode) {
     return (
       <RSVPForm guest={guest} onSubmit={(u) => { onUpdate(guest.id, { ...u, status: 'Confirmed' }); setIsRSVPMode(false); }} onGoToDashboard={() => setIsRSVPMode(false)} onExitSimulation={() => setIsRSVPMode(false)} />
     );
@@ -75,9 +76,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
           <div className="bg-white rounded-[4rem] overflow-hidden border border-stone-100 shadow-xl flex flex-col lg:flex-row group transition-all relative">
             <div className="lg:w-3/5 h-[400px] lg:h-[600px] overflow-hidden relative">
               <img src={room.image} className="w-full h-full object-cover" alt={room.title} />
-              {onUpdateRoomImage && (
-                <button onClick={(e) => triggerUpload(e, 'room', room.roomNo)} className="absolute top-8 right-8 bg-[#D4AF37] text-stone-900 p-4 rounded-full shadow-2xl opacity-0 group-hover:opacity-100 transition-all">
-                  <Camera size={24} />
+              {isPlanner && (
+                <button onClick={(e) => triggerUpload(e, 'room', room.roomNo)} className="absolute top-8 right-8 bg-[#D4AF37] text-stone-900 px-6 py-3 rounded-full shadow-2xl border-2 border-white z-[10000] flex items-center gap-2 font-black text-[10px] uppercase">
+                  <Camera size={20} /> Edit Room View
                 </button>
               )}
             </div>
@@ -85,7 +86,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
               <h3 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-6">{room.title}</h3>
               <div className="bg-white p-6 rounded-3xl border border-[#D4AF37]/20 shadow-sm mb-10">
                 <p className="text-stone-800 font-bold text-sm leading-snug">{locationInfo.name}<br/>{locationInfo.address}</p>
-                <a href={locationInfo.mapLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#D4AF37] text-stone-900 px-6 py-3 rounded-xl text-[10px] font-black mt-4 shadow-md"><Navigation size={14} /> Maps</a>
+                <a href={locationInfo.mapLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#D4AF37] text-stone-900 px-6 py-3 rounded-xl text-[10px] font-black mt-4 shadow-md"><Navigation size={14} /> View Map</a>
               </div>
             </div>
           </div>
@@ -100,9 +101,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
             <div key={event.id} className="bg-white rounded-[3.5rem] p-12 border border-stone-100 shadow-xl space-y-8 group transition-all relative overflow-hidden">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 text-[#D4AF37]"><Clock size={20} /><span className="text-[12px] font-black uppercase tracking-[0.4em]">{event.time}</span></div>
-                {onUpdateEventImage && (
-                  <button onClick={(e) => triggerUpload(e, 'event', event.id)} className="p-3 bg-stone-50 rounded-full text-stone-400 hover:text-[#D4AF37] transition-all">
-                    <Camera size={16} />
+                {isPlanner && (
+                  <button onClick={(e) => triggerUpload(e, 'event', event.id)} className="p-3 bg-stone-900 text-[#D4AF37] rounded-full shadow-lg z-[10000] flex items-center gap-2 px-5 py-2">
+                    <Camera size={16} /> <span className="text-[9px] font-black uppercase">Edit Event Photo</span>
                   </button>
                 )}
               </div>
