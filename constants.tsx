@@ -1,3 +1,4 @@
+
 import { Guest, Budget, RoomDetail, Quotation, EventFunction } from './types';
 
 export const EVENT_CONFIG = {
@@ -19,6 +20,11 @@ export const PROPERTY_LOCATIONS = {
     name: "Marinha Dourada Resort",
     address: "Arpora, Goa 403509",
     mapLink: "https://maps.app.goo.gl/H8YvM6XvN2C2"
+  },
+  TREE_HOTEL: {
+    name: "The Tree House Hotel",
+    address: "Arossim Heritage Zone, Goa",
+    mapLink: "https://maps.app.goo.gl/JxgefAuSutBzo5hb7"
   }
 };
 
@@ -65,23 +71,81 @@ export const ITINERARY: EventFunction[] = [
   }
 ];
 
-export const INITIAL_GUESTS: Guest[] = Array.from({ length: 45 }, (_, i) => ({
-  id: `guest-${i + 1}`,
-  name: i < 3 ? ['Mom', 'Dad', 'Nisha'][i] : `Guest ${i + 1}`,
-  category: i < 3 ? 'Family' : i < 15 ? 'VIP' : 'Friend',
-  side: i % 2 === 0 ? 'Ladkewale' : 'Ladkiwale',
-  property: i < 5 ? 'Villa-Pool' : i < 10 ? 'Villa-Hall' : 'Resort',
-  roomNo: String(101 + (i % 20)),
-  dietaryNote: i % 5 === 0 ? 'Vegan' : 'Standard Veg',
-  sangeetAct: i % 4 === 0 ? 'Solo Dance' : 'TBD',
-  pickupScheduled: i < 5,
-  status: 'Pending',
-  dressCode: 'Indo-Western Glitz',
-  mealPlan: {
-    lunch17: 'Goan Coastal Buffet',
-    dinner18: 'Royal Thali'
-  }
-}));
+// Expanded Room Database to include 30 rooms: 5 in each Villa, 15 in Tree Hotel, 5 in Resort
+// Fixed type incompatibility error by explicitly casting room 'type' property
+export const ROOM_DATABASE: RoomDetail[] = [
+  // VILLA A: POOLSIDE (5 Rooms)
+  ...[101, 102, 103, 104, 105].map(num => ({
+    roomNo: String(num),
+    property: "Villa-Pool" as const,
+    title: num === 101 ? "Heritage Master Suite" : `Luxury Room ${num}`,
+    description: "Elegant pool-facing room in Villa A with heritage Goan architecture.",
+    image: "https://images.unsplash.com/photo-1628592102751-ba83b03bc42e?auto=format&fit=crop&q=80",
+    type: (num === 101 ? "Master" : "Standard") as RoomDetail['type'],
+    amenities: ["AC", "En-suite Bath", "Pool Access"]
+  })),
+
+  // VILLA B: RED HALL (5 Rooms)
+  ...[201, 202, 203, 204, 205].map(num => ({
+    roomNo: String(num),
+    property: "Villa-Hall" as const,
+    title: num === 201 ? "Royal Red Suite" : `Heritage Room ${num}`,
+    description: "Grand room in the Red Villa B, close to the central celebration hall.",
+    image: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80",
+    type: (num === 201 ? "Suite" : "Standard") as RoomDetail['type'],
+    amenities: ["AC", "Balcony", "WiFi"]
+  })),
+
+  // RESORT (5 Rooms)
+  ...[301, 302, 303, 304, 305].map(num => ({
+    roomNo: String(num),
+    property: "Resort" as const,
+    title: `Lagoon Deluxe ${num}`,
+    description: "Modern room with serene lagoon views at Marinha Dourada.",
+    image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80",
+    type: "Standard" as const,
+    amenities: ["AC", "Lagoon View", "TV"]
+  })),
+
+  // TREE HOUSE / HOTEL (15 Rooms)
+  ...[401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415].map(num => ({
+    roomNo: String(num),
+    property: "TreeHouse" as const,
+    title: `Canopy Room ${num}`,
+    description: "Unique elevated room nestled in nature, offering a peaceful Goan retreat.",
+    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80",
+    type: "Standard" as const,
+    amenities: ["AC", "Forest View", "Eco-Design"]
+  }))
+];
+
+export const INITIAL_GUESTS: Guest[] = Array.from({ length: 45 }, (_, i) => {
+  let property: any = 'Resort';
+  let roomNo = '301';
+
+  if (i < 5) { property = 'Villa-Pool'; roomNo = String(101 + i); }
+  else if (i < 10) { property = 'Villa-Hall'; roomNo = String(201 + (i - 5)); }
+  else if (i < 25) { property = 'TreeHouse'; roomNo = String(401 + (i - 10)); }
+  else { property = 'Resort'; roomNo = String(301 + (i % 5)); }
+
+  return {
+    id: `guest-${i + 1}`,
+    name: i < 3 ? ['Mom', 'Dad', 'Nisha'][i] : `Guest ${i + 1}`,
+    category: i < 3 ? 'Family' : i < 15 ? 'VIP' : 'Friend',
+    side: i % 2 === 0 ? 'Ladkewale' : 'Ladkiwale',
+    property: property,
+    roomNo: roomNo,
+    dietaryNote: i % 5 === 0 ? 'Vegan' : 'Standard Veg',
+    sangeetAct: i % 4 === 0 ? 'Solo Dance' : 'TBD',
+    pickupScheduled: i < 5,
+    status: 'Pending',
+    dressCode: 'Indo-Western Glitz',
+    mealPlan: {
+      lunch17: 'Goan Coastal Buffet',
+      dinner18: 'Royal Thali'
+    }
+  };
+});
 
 export const INITIAL_BUDGET: Budget = {
   totalBudget: 1500000,
@@ -123,44 +187,5 @@ export const QUOTATIONS: Quotation[] = [
     roomRate: 4800,
     extraPax: 2500,
     menuHighlights: ["Serradura", "Chicken Xacuti", "Vindaloo Surprise", "Portuguese Pastries"]
-  }
-];
-
-export const ROOM_DATABASE: RoomDetail[] = [
-  {
-    roomNo: "101",
-    property: "Villa-Pool",
-    title: "Heritage Master Suite",
-    description: "Grand suite with a private veranda overlooking the pool area at Lilia.",
-    image: "https://images.unsplash.com/photo-1628592102751-ba83b03bc42e?auto=format&fit=crop&q=80",
-    type: "Master",
-    amenities: ["AC", "En-suite Bath", "Pool Access", "Mini Bar"]
-  },
-  {
-    roomNo: "102",
-    property: "Villa-Pool",
-    title: "Teak Wood Twin",
-    description: "Traditional Goan decor with twin beds and garden views at Lilia.",
-    image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80",
-    type: "Twin",
-    amenities: ["AC", "Garden View", "WiFi"]
-  },
-  {
-    roomNo: "201",
-    property: "Villa-Hall",
-    title: "Royal Red Suite",
-    description: "Elegant room in the heritage wing near the Sangeet hall at Lilia.",
-    image: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80",
-    type: "Suite",
-    amenities: ["AC", "Balcony", "Room Service"]
-  },
-  {
-    roomNo: "301",
-    property: "Resort",
-    title: "Lagoon View Deluxe",
-    description: "Modern deluxe room with views of the Arpora salt pans.",
-    image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80",
-    type: "Standard",
-    amenities: ["AC", "Lagoon View", "Flat Screen TV"]
   }
 ];

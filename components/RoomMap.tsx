@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Guest, RoomDetail, PropertyType } from '../types';
-import { Users, Bed, CheckCircle2, Circle, Home, Building2, Hotel, TreePine, Camera, Edit3 } from 'lucide-react';
+import { Users, CheckCircle2, Circle, Home, Building2, Hotel, TreePine, Camera } from 'lucide-react';
 
 interface RoomMapProps {
   guests: Guest[];
@@ -40,26 +40,35 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
 
   const triggerUpload = (e: React.MouseEvent, room: RoomDetail) => {
     e.stopPropagation();
+    e.preventDefault();
     setPendingUploadRoom(room);
-    fileInputRef.current?.click();
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 10);
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept="image/*" 
+        onChange={handleFileChange} 
+      />
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div>
-          <h2 className="text-4xl font-serif font-bold text-stone-900">Property Occupancy</h2>
-          <p className="text-stone-500 italic text-lg">Managing Estate, Resort, and TreeHouse bookings.</p>
+        <div className="px-1">
+          <h2 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 leading-tight">Property <br/><span className="text-[#B8860B]">Occupancy</span></h2>
+          <p className="text-stone-500 italic text-sm md:text-lg mt-2">Allocating {rooms.length} Heritage Rooms across the Goan Estate.</p>
         </div>
         <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200 overflow-x-auto max-w-full no-scrollbar">
           {(['All', 'Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] as const).map((prop) => (
             <button
               key={prop}
               onClick={() => setFilter(prop)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                filter === prop ? 'bg-stone-900 text-white shadow-lg' : 'text-stone-400 hover:text-stone-600'
+              className={`px-4 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                filter === prop ? 'bg-stone-900 text-white shadow-xl' : 'text-stone-400 hover:text-stone-600'
               }`}
             >
               {prop.replace('-', ' ')}
@@ -68,7 +77,7 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-10">
         {filteredRooms.map((room) => {
           const occupants = guests.filter(g => g.roomNo === room.roomNo && g.property === room.property);
           const isFull = occupants.length >= 2;
@@ -80,28 +89,35 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
               className="bg-white rounded-3xl overflow-hidden border border-stone-200 shadow-sm hover:shadow-2xl transition-all cursor-pointer group flex flex-col h-full relative"
               onClick={() => setSelectedRoom(room)}
             >
-              <div className="relative h-48 overflow-hidden bg-stone-50">
-                <img src={room.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={room.title} />
-                <div className="absolute top-4 left-4 bg-stone-900/90 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 z-10">
+              <div className="relative h-56 overflow-hidden bg-stone-50">
+                <img src={room.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={room.title} />
+                <div className="absolute top-4 left-4 bg-stone-900/90 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 z-10 border border-white/10">
                   <Icon size={12} className="text-amber-500" /> {room.property} #{room.roomNo}
                 </div>
                 {isPlanner && (
                   <button 
                     onClick={(e) => triggerUpload(e, room)}
-                    className="absolute bottom-4 right-4 bg-[#D4AF37] text-stone-900 px-4 py-2.5 rounded-full border-2 border-white shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex items-center gap-2 font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all z-[10000]"
+                    className="absolute bottom-4 right-4 bg-[#D4AF37] text-stone-900 px-5 py-2.5 rounded-full border-2 border-white shadow-[0_15px_30px_rgba(0,0,0,0.4)] flex items-center gap-2 font-black text-[10px] uppercase tracking-widest hover:scale-110 active:scale-95 transition-all z-[90]"
                   >
-                    <Camera size={14} /> Edit Room Photo
+                    <Camera size={14} /> Edit Room
                   </button>
                 )}
               </div>
-              <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-lg font-serif font-bold text-stone-900 mb-2">{room.title}</h3>
-                <div className="mt-auto flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-stone-400">
-                    <Users size={14} />
-                    <span className="text-xs font-medium">{occupants.length} / 2 Guests</span>
+              <div className="p-8 flex flex-col flex-grow">
+                <h3 className="text-xl font-serif font-bold text-stone-900 mb-3 group-hover:text-[#B8860B] transition-colors">{room.title}</h3>
+                <div className="mt-auto flex items-center justify-between border-t border-stone-50 pt-5">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-stone-400">
+                      <Users size={14} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">{occupants.length} / 2 Occupied</span>
+                    </div>
+                    {occupants.length > 0 && (
+                       <p className="text-[10px] font-bold text-stone-900 truncate max-w-[120px]">
+                         {occupants.map(o => o.name.split(' ')[0]).join(' & ')}
+                       </p>
+                    )}
                   </div>
-                  {isFull ? <CheckCircle2 size={16} className="text-green-500" /> : <Circle size={16} className="text-stone-200" />}
+                  {isFull ? <CheckCircle2 size={20} className="text-green-500" /> : <Circle size={20} className="text-stone-100" />}
                 </div>
               </div>
             </div>
@@ -110,28 +126,31 @@ const RoomMap: React.FC<RoomMapProps> = ({ guests, rooms, onUpdateImage, isPlann
       </div>
 
       {selectedRoom && (
-        <div className="fixed inset-0 bg-stone-900/95 z-[500] flex items-center justify-center p-4" onClick={() => setSelectedRoom(null)}>
-          <div className="bg-white rounded-[2.5rem] max-w-4xl w-full overflow-hidden flex flex-col md:flex-row animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-            <div className="md:w-1/2 h-64 md:h-auto">
+        <div className="fixed inset-0 bg-stone-900/98 z-[500] flex items-center justify-center p-4 md:p-10" onClick={() => setSelectedRoom(null)}>
+          <div className="bg-white rounded-[3rem] md:rounded-[5rem] max-w-5xl w-full overflow-hidden flex flex-col lg:flex-row animate-in zoom-in duration-500 border-8 border-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="lg:w-1/2 h-64 lg:h-auto relative">
               <img src={selectedRoom.image} className="w-full h-full object-cover" alt={selectedRoom.title} />
+              <div className="absolute inset-0 bg-gradient-to-t from-stone-900/40 to-transparent"></div>
             </div>
-            <div className="md:w-1/2 p-12">
-              <h3 className="text-4xl font-serif font-bold text-stone-900 mb-6">{selectedRoom.title}</h3>
-              <div className="space-y-6">
+            <div className="lg:w-1/2 p-10 md:p-20 flex flex-col justify-center">
+              <span className="text-[#B8860B] font-black text-[10px] uppercase tracking-[0.5em] mb-4">Detailed View</span>
+              <h3 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 mb-8 leading-tight">{selectedRoom.title}</h3>
+              <div className="space-y-10">
                 <div>
-                  <h4 className="text-xs font-black text-stone-400 uppercase tracking-widest mb-4">Assigned Guests</h4>
-                  <div className="space-y-2">
+                  <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-6">Honored Residents</h4>
+                  <div className="space-y-3">
                     {guests.filter(g => g.roomNo === selectedRoom.roomNo && g.property === selectedRoom.property).map(g => (
-                      <div key={g.id} className="flex items-center gap-3 p-3 bg-stone-50 rounded-xl border border-stone-100 font-bold text-stone-900">
+                      <div key={g.id} className="flex items-center gap-4 p-5 bg-stone-50 rounded-2xl border border-stone-100 font-black text-stone-900 uppercase tracking-widest text-xs">
+                        <div className="w-2 h-2 rounded-full bg-[#D4AF37]"></div>
                         {g.name}
                       </div>
                     ))}
                     {guests.filter(g => g.roomNo === selectedRoom.roomNo && g.property === selectedRoom.property).length === 0 && (
-                      <p className="text-xs text-stone-400 italic">No guests assigned to this room yet.</p>
+                      <p className="text-sm text-stone-300 italic">No guests assigned to this room.</p>
                     )}
                   </div>
                 </div>
-                <button onClick={() => setSelectedRoom(null)} className="w-full py-4 bg-stone-900 text-white rounded-2xl font-bold uppercase text-xs tracking-widest">Close</button>
+                <button onClick={() => setSelectedRoom(null)} className="w-full py-6 bg-stone-900 text-white rounded-full font-black uppercase text-[10px] tracking-[0.3em] shadow-xl hover:bg-stone-800 transition-all">Close Suite View</button>
               </div>
             </div>
           </div>

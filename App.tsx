@@ -13,15 +13,18 @@ import RSVPManager from './components/RSVPManager';
 import GuestPortal from './components/GuestPortal';
 import { Menu, ShieldCheck, UserPlus, EyeOff, CheckCircle, RefreshCw, Camera, Download, AlertTriangle, Hammer } from 'lucide-react';
 
-const STABLE_KEY = 'ESTATE_PLANNER_STABLE_V6';
-const MEDIA_KEY_ROOMS = 'ESTATE_PLANNER_ROOMS_V6';
-const MEDIA_KEY_EVENTS = 'ESTATE_PLANNER_EVENTS_V6';
-const SESSION_KEY = 'ESTATE_PLANNER_SESSION_V6';
+// PERMANENT STORAGE KEYS - We will NOT change these again to prevent data loss.
+const STORAGE_KEY_GUESTS = 'ESTATE_SYNC_GUESTS_PERMANENT';
+const STORAGE_KEY_ROOMS = 'ESTATE_SYNC_ROOMS_PERMANENT';
+const STORAGE_KEY_EVENTS = 'ESTATE_SYNC_EVENTS_PERMANENT';
+const STORAGE_KEY_SESSION = 'ESTATE_SYNC_SESSION_PERMANENT';
 
-/**
- * Ultra-Aggressive Image Compression
- * Downscales to 600px and 0.5 quality to ensure we NEVER hit the 5MB quota
- */
+// LEGACY KEYS FOR MIGRATION (To recover your lost data)
+const LEGACY_KEYS = [
+  'ESTATE_PLANNER_STABLE_V8', 'ESTATE_PLANNER_STABLE_V7', 'ESTATE_PLANNER_STABLE_V6',
+  'ESTATE_PLANNER_ROOMS_V8', 'ESTATE_PLANNER_ROOMS_V7', 'ESTATE_PLANNER_ROOMS_V6'
+];
+
 const compressImage = (base64Str: string): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
@@ -31,12 +34,10 @@ const compressImage = (base64Str: string): Promise<string> => {
       const MAX_WIDTH = 600; 
       let width = img.width;
       let height = img.height;
-
       if (width > MAX_WIDTH) {
         height *= MAX_WIDTH / width;
         width = MAX_WIDTH;
       }
-
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
@@ -57,65 +58,73 @@ const App: React.FC = () => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  // MIGRATION & INITIALIZATION LOGIC
   const [guests, setGuests] = useState<Guest[]>(() => {
-    const saved = localStorage.getItem(STABLE_KEY);
-    try { return saved ? JSON.parse(saved) : INITIAL_GUESTS; } catch (e) { return INITIAL_GUESTS; }
+    const permanent = localStorage.getItem(STORAGE_KEY_GUESTS);
+    if (permanent) return JSON.parse(permanent);
+
+    // Try to recover from legacy versions if permanent is empty
+    for (const key of ['ESTATE_PLANNER_STABLE_V8', 'ESTATE_PLANNER_STABLE_V7', 'ESTATE_PLANNER_STABLE_V6']) {
+      const legacy = localStorage.getItem(key);
+      if (legacy) {
+        console.log(`Migrating data from ${key}...`);
+        return JSON.parse(legacy);
+      }
+    }
+    return INITIAL_GUESTS;
   });
 
   const [rooms, setRooms] = useState<RoomDetail[]>(() => {
-    const saved = localStorage.getItem(MEDIA_KEY_ROOMS);
-    try { return saved ? JSON.parse(saved) : STATIC_ROOMS; } catch (e) { return STATIC_ROOMS; }
+    const permanent = localStorage.getItem(STORAGE_KEY_ROOMS);
+    if (permanent) return JSON.parse(permanent);
+    
+    for (const key of ['ESTATE_PLANNER_ROOMS_V8', 'ESTATE_PLANNER_ROOMS_V7', 'ESTATE_PLANNER_ROOMS_V6']) {
+      const legacy = localStorage.getItem(key);
+      if (legacy) return JSON.parse(legacy);
+    }
+    return STATIC_ROOMS;
   });
 
   const [itinerary, setItinerary] = useState<EventFunction[]>(() => {
-    const saved = localStorage.getItem(MEDIA_KEY_EVENTS);
+    const saved = localStorage.getItem(STORAGE_KEY_EVENTS);
     try { return saved ? JSON.parse(saved) : STATIC_ITINERARY; } catch (e) { return STATIC_ITINERARY; }
   });
 
-  const deferredGuests = useDeferredValue(guests);
-
   const [userRole, setUserRole] = useState<UserRole>(() => {
-    const saved = localStorage.getItem(SESSION_KEY);
+    const saved = localStorage.getItem(STORAGE_KEY_SESSION);
     try { return saved ? JSON.parse(saved).role : null; } catch (e) { return null; }
   });
 
   const [activeGuestId, setActiveGuestId] = useState<string | null>(() => {
-    const saved = localStorage.getItem(SESSION_KEY);
+    const saved = localStorage.getItem(STORAGE_KEY_SESSION);
     try { return saved ? JSON.parse(saved).guestId : null; } catch (e) { return null; }
   });
 
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
-    const saved = localStorage.getItem(SESSION_KEY);
+    const saved = localStorage.getItem(STORAGE_KEY_SESSION);
     try { return saved ? JSON.parse(saved).lastTab || 'master' : 'master'; } catch (e) { return 'master'; }
   });
 
+  const deferredGuests = useDeferredValue(guests);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [budget, setBudget] = useState<Budget>(INITIAL_BUDGET);
-
   const isPlanner = userRole === 'planner';
 
-  // Safe Save Wrapper
-  const safeSave = (key: string, value: any) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-      setError("Browser storage is full! Please use fewer/smaller custom images.");
-      console.error("Storage error:", e);
-    }
-  };
-
+  // Persistence Effects
   useEffect(() => {
     if (userRole) {
-      safeSave(SESSION_KEY, { role: userRole, guestId: activeGuestId, lastTab: activeTab });
+      localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify({ role: userRole, guestId: activeGuestId, lastTab: activeTab }));
     }
   }, [userRole, activeGuestId, activeTab]);
 
-  useEffect(() => { safeSave(STABLE_KEY, guests); }, [guests]);
-  useEffect(() => { safeSave(MEDIA_KEY_ROOMS, rooms); }, [rooms]);
-  useEffect(() => { safeSave(MEDIA_KEY_EVENTS, itinerary); }, [itinerary]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEY_GUESTS, JSON.stringify(guests)); }, [guests]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEY_ROOMS, JSON.stringify(rooms)); }, [rooms]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(itinerary)); }, [itinerary]);
 
   const handleUpdateGuest = useCallback((id: string, updates: Partial<Guest>) => {
     setGuests((prev) => prev.map((g) => (g.id === id ? { ...g, ...updates } : g)));
+    setSaveIndicator(true);
+    setTimeout(() => setSaveIndicator(false), 1500);
   }, []);
 
   const handleUpdateRoomImage = async (roomNo: string, property: string, newImage: string) => {
@@ -145,7 +154,8 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
+    // Only clear session, keep guest data
+    localStorage.removeItem(STORAGE_KEY_SESSION);
     window.location.reload();
   };
 
@@ -167,7 +177,7 @@ const App: React.FC = () => {
             <div className="bg-stone-900 text-white p-5 rounded-[2.5rem] flex flex-col sm:flex-row items-center justify-between border-2 border-[#D4AF37] shadow-2xl mb-10 gap-4">
               <div className="flex items-center gap-4">
                 <ShieldCheck className="text-[#D4AF37]" size={24} />
-                <p className="text-sm font-bold">Previewing as: <span className="text-[#D4AF37]">{currentGuest.name}</span></p>
+                <p className="text-sm font-bold">Admin Preview: <span className="text-[#D4AF37]">{currentGuest.name}</span></p>
               </div>
               <button onClick={() => handleTabChange('master')} className="bg-[#D4AF37] text-stone-900 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                 <EyeOff size={16} /> Exit Preview
@@ -191,10 +201,10 @@ const App: React.FC = () => {
       return (
         <div className="space-y-10">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
-            <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master List</h2>
+            <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight tracking-tight">Master List</h2>
             {isPlanner && (
-              <button onClick={() => setGuests(p => [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Resort', roomNo: 'TBD', status: 'Pending', mealPlan: { lunch17: '', dinner18: '' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...p])} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl">
-                <UserPlus size={18} /> New Entry
+              <button onClick={() => setGuests(p => [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Resort', roomNo: 'TBD', status: 'Pending', mealPlan: { lunch17: '', dinner18: '' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...p])} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl border-4 border-white">
+                <UserPlus size={18} /> New Guest
               </button>
             )}
           </div>
@@ -202,11 +212,11 @@ const App: React.FC = () => {
             guests={deferredGuests} 
             onUpdate={handleUpdateGuest}
             columns={[
-              { key: 'name', label: 'HONORED NAME', editable: isPlanner },
+              { key: 'name', label: 'FULL NAME', editable: isPlanner },
               { key: 'side', label: 'SIDE', editable: isPlanner, type: 'select', options: ['Ladkiwale', 'Ladkewale', 'Common'] },
               { key: 'property', label: 'STAY', editable: isPlanner, type: 'select', options: ['Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] },
-              { key: 'roomNo', label: 'ROOM #', editable: isPlanner },
-              { key: 'status', label: 'STATUS', editable: isPlanner, type: 'select', options: ['Confirmed', 'Pending', 'Declined'] },
+              { key: 'roomNo', label: 'ROOM', editable: isPlanner },
+              { key: 'status', label: 'RSVP', editable: isPlanner, type: 'select', options: ['Confirmed', 'Pending', 'Declined'] },
             ]}
           />
         </div>
@@ -240,18 +250,13 @@ const App: React.FC = () => {
               {isPlanner && (
                 <div className="flex items-center gap-2 bg-[#D4AF37] text-stone-900 px-4 py-2 rounded-full shadow-md mr-2">
                    <Hammer size={14} />
-                   <span className="text-[9px] font-black uppercase tracking-widest">Master Planner Mode</span>
-                </div>
-              )}
-              {error && (
-                <div className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-full text-[9px] font-black uppercase">
-                  <AlertTriangle size={14} /> Storage Full
+                   <span className="text-[9px] font-black uppercase tracking-widest">Planner Mode</span>
                 </div>
               )}
               {saveIndicator ? (
-                <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full"><CheckCircle size={16} className="text-[#D4AF37]" /> <span className="text-[10px] font-black uppercase">Saved</span></div>
+                <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full"><CheckCircle size={16} className="text-[#D4AF37]" /> <span className="text-[10px] font-black uppercase">Synced</span></div>
               ) : (
-                <div className="flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 opacity-50"><RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> <span className="text-[10px] font-black uppercase">Live Sync</span></div>
+                <div className="flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 opacity-50"><RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> <span className="text-[10px] font-black uppercase">Active</span></div>
               )}
             </div>
           </header>
