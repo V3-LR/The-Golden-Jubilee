@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useTransition, useDeferredValue } from 'react';
-import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task, Quotation } from './types';
+import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task } from './types';
 import { INITIAL_GUESTS, INITIAL_BUDGET, EVENT_CONFIG, ITINERARY as STATIC_ITINERARY, ROOM_DATABASE as STATIC_ROOMS, VILLA_TASKS } from './constants';
 import Sidebar from './components/Sidebar';
 import DataTable from './components/DataTable';
@@ -13,10 +13,11 @@ import RSVPManager from './components/RSVPManager';
 import GuestPortal from './components/GuestPortal';
 import MealPlan from './components/MealPlan';
 import TaskMatrix from './components/TaskMatrix';
-import { Menu, ShieldCheck, UserPlus, EyeOff, CheckCircle, RefreshCw, Camera, Download, AlertTriangle, Hammer, Lock, Save, Copy, Database } from 'lucide-react';
+import { Menu, UserPlus, CheckCircle, RefreshCw, Hammer, Database } from 'lucide-react';
 
-// STABLE PERSISTENCE KEY - CRITICAL FOR PRODUCTION
-const STORAGE_KEY = 'SRIVASTAVA_ANNIVERSARY_FINAL_V1';
+// ABSOLUTE SOURCE OF TRUTH KEYS
+const STORAGE_KEY = 'SRIVASTAVA_ANNIVERSARY_FINAL';
+const LEGACY_KEY = 'ESTATE_PLANNER_STABLE_V1';
 
 interface AppState {
   guests: Guest[];
@@ -32,16 +33,26 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Unified State Object for Persistence
+  // 1. HARDENED INITIALIZATION LOGIC
   const [appState, setAppState] = useState<AppState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const primary = localStorage.getItem(STORAGE_KEY);
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    
+    const saved = primary || legacy;
+    
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Ensure we don't return an empty object/array if parsing succeeded but data is hollow
+        if (parsed && parsed.guests && parsed.guests.length > 0) {
+          return parsed;
+        }
       } catch (e) {
-        console.error("Data recovery failed, using defaults", e);
+        console.error("Data recovery failed, attempting next fallback", e);
       }
     }
+    
+    // Default fallback to static constants only if no storage found
     return {
       guests: INITIAL_GUESTS,
       rooms: STATIC_ROOMS,
@@ -57,21 +68,49 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isPlanner = session.role === 'planner';
 
-  // Persistence Hook
+  // 2. MULTI-TAB SYNC LISTENER
+  useEffect(() => {
+    const handleGlobalSync = (e: StorageEvent | Event) => {
+      // If it's a real storage event from another tab OR our manual dispatch
+      const rawData = localStorage.getItem(STORAGE_KEY);
+      if (rawData) {
+        try {
+          const freshData = JSON.parse(rawData);
+          setAppState(freshData);
+        } catch (err) {
+          console.error("Failed to sync cross-tab data", err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleGlobalSync);
+    return () => window.removeEventListener('storage', handleGlobalSync);
+  }, []);
+
+  // 3. PERSISTENCE HOOK (Writes to Absolute Key)
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
   }, [appState]);
 
-  // Automatic Pax Sync logic embedded in state updates
-  const updateGuests = (newGuests: Guest[]) => {
-    const confirmedPax = newGuests.filter(g => g.status === 'Confirmed').length;
-    setAppState((prev: AppState) => ({
-      ...prev,
-      guests: newGuests,
-      budget: { ...prev.budget, finalCateringPax: confirmedPax }
-    }));
+  // Unified State Broadcast Update
+  const broadcastUpdate = (updates: Partial<AppState>) => {
+    setAppState((prev: AppState) => {
+      const newState = { ...prev, ...updates };
+      // Manual dispatch to trigger sync in current tab if needed, 
+      // but primarily ensures consistency across the app ecosystem
+      window.dispatchEvent(new Event('storage'));
+      return newState;
+    });
     setSaveIndicator(true);
     setTimeout(() => setSaveIndicator(false), 1500);
+  };
+
+  const updateGuests = (newGuests: Guest[]) => {
+    const confirmedPax = newGuests.filter(g => g.status === 'Confirmed').length;
+    broadcastUpdate({
+      guests: newGuests,
+      budget: { ...appState.budget, finalCateringPax: confirmedPax }
+    });
   };
 
   const handleUpdateGuest = useCallback((id: string, updates: Partial<Guest>) => {
@@ -80,56 +119,47 @@ const App: React.FC = () => {
   }, [guests]);
 
   const handleFinalizePath = (path: 'Villa' | 'Resort') => {
-    setAppState((prev: AppState) => {
-      const newTasks = path === 'Villa' ? [...prev.tasks, ...VILLA_TASKS] : prev.tasks;
-      const committedAmount = path === 'Villa' ? 310000 : 485500;
-      return {
-        ...prev,
-        tasks: newTasks,
-        budget: {
-          ...prev.budget,
-          selectedPath: path,
-          committedSpend: committedAmount
-        }
-      };
+    const newTasks = path === 'Villa' ? [...appState.tasks, ...VILLA_TASKS] : appState.tasks;
+    const committedAmount = path === 'Villa' ? 310000 : 485500;
+    broadcastUpdate({
+      tasks: newTasks,
+      budget: {
+        ...appState.budget,
+        selectedPath: path,
+        committedSpend: committedAmount
+      }
     });
-    setSaveIndicator(true);
-    setTimeout(() => setSaveIndicator(false), 1500);
   };
 
   const handleEmergencyBackup = () => {
     const dataStr = JSON.stringify(appState, null, 2);
     navigator.clipboard.writeText(dataStr);
-    alert("Emergency Backup Success! Entire app data (Guests, Budget, Rooms) has been copied to your clipboard. Paste it into a secure Notes app.");
+    alert("Emergency Backup Success! Data copied. Save this in your notes.");
   };
 
   const handleLogin = (role: UserRole, guestId?: string) => {
-    setAppState((prev: AppState) => ({
-      ...prev,
-      session: { ...prev.session, role, guestId: guestId || null, lastTab: guestId ? 'portal' : 'master' }
-    }));
+    broadcastUpdate({
+      session: { ...appState.session, role, guestId: guestId || null, lastTab: guestId ? 'portal' : 'master' }
+    });
   };
 
   const handleLogout = () => {
-    setAppState((prev: AppState) => ({
-      ...prev,
+    broadcastUpdate({
       session: { role: null, guestId: null, lastTab: 'master' }
-    }));
+    });
   };
 
   const handleTabChange = useCallback((tab: AppTab) => {
     setIsSidebarOpen(false);
-    setAppState((prev: AppState) => ({
-      ...prev,
-      session: { ...prev.session, lastTab: tab }
-    }));
-  }, []);
+    broadcastUpdate({
+      session: { ...appState.session, lastTab: tab }
+    });
+  }, [appState.session]);
 
   const handleTeleport = (guestId: string) => {
-    setAppState((prev: AppState) => ({
-      ...prev,
-      session: { ...prev.session, guestId, lastTab: 'portal' }
-    }));
+    broadcastUpdate({
+      session: { ...appState.session, guestId, lastTab: 'portal' }
+    });
   };
 
   if (!session.role) {
@@ -147,8 +177,8 @@ const App: React.FC = () => {
           roomDatabase={rooms}
           itinerary={itinerary}
           isPlanner={isPlanner}
-          onUpdateEventImage={(id: string, img: string) => setAppState((prev: AppState) => ({ ...prev, itinerary: prev.itinerary.map((e: EventFunction) => e.id === id ? { ...e, image: img } : e) }))}
-          onUpdateRoomImage={(no: string, prop: string, img: string) => setAppState((prev: AppState) => ({ ...prev, rooms: prev.rooms.map((r: RoomDetail) => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) }))}
+          onUpdateEventImage={(id: string, img: string) => broadcastUpdate({ itinerary: itinerary.map((e: EventFunction) => e.id === id ? { ...e, image: img } : e) })}
+          onUpdateRoomImage={(no: string, prop: string, img: string) => broadcastUpdate({ rooms: rooms.map((r: RoomDetail) => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) })}
           onBackToMaster={() => handleTabChange('master')}
         />
       );
@@ -160,7 +190,7 @@ const App: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
             <div>
               <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight tracking-tight">Master List</h2>
-              <p className="text-stone-500 italic mt-2">Manage all 45 guests from one central hub.</p>
+              <p className="text-stone-500 italic mt-2">The permanent source of truth for all 45 guests.</p>
             </div>
             {isPlanner && (
               <div className="flex flex-wrap gap-4">
@@ -195,15 +225,15 @@ const App: React.FC = () => {
     }
 
     if (session.lastTab === 'rsvp-manager') return <RSVPManager guests={deferredGuests} onUpdate={handleUpdateGuest} role={session.role} onTeleport={handleTeleport} />;
-    if (session.lastTab === 'venue') return <VenueOverview onUpdateRoomImage={(no: string, prop: string, img: string) => setAppState((prev: AppState) => ({ ...prev, rooms: prev.rooms.map((r: RoomDetail) => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) }))} rooms={rooms} isPlanner={isPlanner} />;
-    if (session.lastTab === 'rooms') return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={(no: string, prop: string, img: string) => setAppState((prev: AppState) => ({ ...prev, rooms: prev.rooms.map((r: RoomDetail) => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) }))} isPlanner={isPlanner} />;
+    if (session.lastTab === 'venue') return <VenueOverview onUpdateRoomImage={(no: string, prop: string, img: string) => broadcastUpdate({ rooms: rooms.map((r: RoomDetail) => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) })} rooms={rooms} isPlanner={isPlanner} />;
+    if (session.lastTab === 'rooms') return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={(no: string, prop: string, img: string) => broadcastUpdate({ rooms: rooms.map((r: RoomDetail) => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) })} isPlanner={isPlanner} />;
     if (session.lastTab === 'meals') return <MealPlan guests={deferredGuests} onUpdate={handleUpdateGuest} isPlanner={isPlanner} />;
-    if (session.lastTab === 'tasks') return <TaskMatrix tasks={tasks} onUpdateTasks={(t: Task[]) => setAppState((prev: AppState) => ({ ...prev, tasks: t }))} isPlanner={isPlanner} />;
+    if (session.lastTab === 'tasks') return <TaskMatrix tasks={tasks} onUpdateTasks={(t: Task[]) => broadcastUpdate({ tasks: t })} isPlanner={isPlanner} />;
     if (session.lastTab === 'tree') return <TreeView guests={deferredGuests} />;
     if (session.lastTab === 'budget') return (
       <BudgetTracker 
         budget={budget} 
-        onUpdateBudget={(u) => setAppState((prev: AppState) => ({ ...prev, budget: { ...prev.budget, ...u } }))} 
+        onUpdateBudget={(u) => broadcastUpdate({ budget: { ...budget, ...u } })} 
         guests={deferredGuests} 
         isPlanner={isPlanner} 
         onFinalizePath={handleFinalizePath}
@@ -223,23 +253,23 @@ const App: React.FC = () => {
         {!isStrictGuest && (
           <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[100] border-b border-[#D4AF37]/10">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={24} /></button>
-            <div className="hidden md:block">
-              <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Estate Sync Online</p>
+            <div className="hidden md:block text-center lg:text-left">
+              <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Sunehri Saalgira Hub</p>
               <h1 className="text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h1>
             </div>
             <div className="flex items-center gap-3">
               {isPlanner && (
                 <div className="flex items-center gap-2 bg-[#D4AF37] text-stone-900 px-4 py-2 rounded-full shadow-md mr-2">
                    <Hammer size={14} />
-                   <span className="text-[9px] font-black uppercase tracking-widest">Planner Mode</span>
+                   <span className="text-[9px] font-black uppercase tracking-widest">Master Planner</span>
                 </div>
               )}
               {saveIndicator ? (
-                <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-in zoom-in"><CheckCircle size={16} className="text-[#D4AF37]" /> <span className="text-[10px] font-black uppercase">Saved Locally</span></div>
+                <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-in zoom-in"><CheckCircle size={16} className="text-[#D4AF37]" /> <span className="text-[10px] font-black uppercase">Protected & Synced</span></div>
               ) : (
                 <div className="flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border-2 border-stone-100 opacity-50">
                   <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> 
-                  <span className="text-[10px] font-black uppercase">Protected</span>
+                  <span className="text-[10px] font-black uppercase">Source of Truth</span>
                 </div>
               )}
             </div>
