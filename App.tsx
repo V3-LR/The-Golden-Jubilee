@@ -18,13 +18,22 @@ import { Menu, ShieldCheck, UserPlus, EyeOff, CheckCircle, RefreshCw, Camera, Do
 // STABLE PERSISTENCE KEY - CRITICAL FOR PRODUCTION
 const STORAGE_KEY = 'SRIVASTAVA_ANNIVERSARY_FINAL_V1';
 
+interface AppState {
+  guests: Guest[];
+  rooms: RoomDetail[];
+  itinerary: EventFunction[];
+  budget: Budget;
+  tasks: Task[];
+  session: { role: UserRole; guestId: string | null; lastTab: string };
+}
+
 const App: React.FC = () => {
   const [saveIndicator, setSaveIndicator] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   // Unified State Object for Persistence
-  const [appState, setAppState] = useState(() => {
+  const [appState, setAppState] = useState<AppState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -56,7 +65,7 @@ const App: React.FC = () => {
   // Automatic Pax Sync logic embedded in state updates
   const updateGuests = (newGuests: Guest[]) => {
     const confirmedPax = newGuests.filter(g => g.status === 'Confirmed').length;
-    setAppState(prev => ({
+    setAppState((prev: AppState) => ({
       ...prev,
       guests: newGuests,
       budget: { ...prev.budget, finalCateringPax: confirmedPax }
@@ -71,7 +80,7 @@ const App: React.FC = () => {
   }, [guests]);
 
   const handleFinalizePath = (path: 'Villa' | 'Resort') => {
-    setAppState(prev => {
+    setAppState((prev: AppState) => {
       const newTasks = path === 'Villa' ? [...prev.tasks, ...VILLA_TASKS] : prev.tasks;
       const committedAmount = path === 'Villa' ? 310000 : 485500;
       return {
@@ -95,14 +104,14 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (role: UserRole, guestId?: string) => {
-    setAppState(prev => ({
+    setAppState((prev: AppState) => ({
       ...prev,
       session: { ...prev.session, role, guestId: guestId || null, lastTab: guestId ? 'portal' : 'master' }
     }));
   };
 
   const handleLogout = () => {
-    setAppState(prev => ({
+    setAppState((prev: AppState) => ({
       ...prev,
       session: { role: null, guestId: null, lastTab: 'master' }
     }));
@@ -110,14 +119,14 @@ const App: React.FC = () => {
 
   const handleTabChange = useCallback((tab: AppTab) => {
     setIsSidebarOpen(false);
-    setAppState(prev => ({
+    setAppState((prev: AppState) => ({
       ...prev,
       session: { ...prev.session, lastTab: tab }
     }));
   }, []);
 
   const handleTeleport = (guestId: string) => {
-    setAppState(prev => ({
+    setAppState((prev: AppState) => ({
       ...prev,
       session: { ...prev.session, guestId, lastTab: 'portal' }
     }));
@@ -138,8 +147,8 @@ const App: React.FC = () => {
           roomDatabase={rooms}
           itinerary={itinerary}
           isPlanner={isPlanner}
-          onUpdateEventImage={(id, img) => setAppState(prev => ({ ...prev, itinerary: prev.itinerary.map(e => e.id === id ? { ...e, image: img } : e) }))}
-          onUpdateRoomImage={(no, prop, img) => setAppState(prev => ({ ...prev, rooms: prev.rooms.map(r => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) }))}
+          onUpdateEventImage={(id: string, img: string) => setAppState((prev: AppState) => ({ ...prev, itinerary: prev.itinerary.map((e: EventFunction) => e.id === id ? { ...e, image: img } : e) }))}
+          onUpdateRoomImage={(no: string, prop: string, img: string) => setAppState((prev: AppState) => ({ ...prev, rooms: prev.rooms.map((r: RoomDetail) => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) }))}
           onBackToMaster={() => handleTabChange('master')}
         />
       );
@@ -186,15 +195,15 @@ const App: React.FC = () => {
     }
 
     if (session.lastTab === 'rsvp-manager') return <RSVPManager guests={deferredGuests} onUpdate={handleUpdateGuest} role={session.role} onTeleport={handleTeleport} />;
-    if (session.lastTab === 'venue') return <VenueOverview onUpdateRoomImage={(no, prop, img) => setAppState(prev => ({ ...prev, rooms: prev.rooms.map(r => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) }))} rooms={rooms} isPlanner={isPlanner} />;
-    if (session.lastTab === 'rooms') return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={(no, prop, img) => setAppState(prev => ({ ...prev, rooms: prev.rooms.map(r => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) }))} isPlanner={isPlanner} />;
+    if (session.lastTab === 'venue') return <VenueOverview onUpdateRoomImage={(no: string, prop: string, img: string) => setAppState((prev: AppState) => ({ ...prev, rooms: prev.rooms.map((r: RoomDetail) => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) }))} rooms={rooms} isPlanner={isPlanner} />;
+    if (session.lastTab === 'rooms') return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={(no: string, prop: string, img: string) => setAppState((prev: AppState) => ({ ...prev, rooms: prev.rooms.map((r: RoomDetail) => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) }))} isPlanner={isPlanner} />;
     if (session.lastTab === 'meals') return <MealPlan guests={deferredGuests} onUpdate={handleUpdateGuest} isPlanner={isPlanner} />;
-    if (session.lastTab === 'tasks') return <TaskMatrix tasks={tasks} onUpdateTasks={(t: Task[]) => setAppState(prev => ({ ...prev, tasks: t }))} isPlanner={isPlanner} />;
+    if (session.lastTab === 'tasks') return <TaskMatrix tasks={tasks} onUpdateTasks={(t: Task[]) => setAppState((prev: AppState) => ({ ...prev, tasks: t }))} isPlanner={isPlanner} />;
     if (session.lastTab === 'tree') return <TreeView guests={deferredGuests} />;
     if (session.lastTab === 'budget') return (
       <BudgetTracker 
         budget={budget} 
-        onUpdateBudget={(u) => setAppState(prev => ({ ...prev, budget: { ...prev.budget, ...u } }))} 
+        onUpdateBudget={(u) => setAppState((prev: AppState) => ({ ...prev, budget: { ...prev.budget, ...u } }))} 
         guests={deferredGuests} 
         isPlanner={isPlanner} 
         onFinalizePath={handleFinalizePath}
