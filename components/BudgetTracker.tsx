@@ -17,39 +17,46 @@ interface BudgetTrackerProps {
 
 const BudgetTracker: React.FC<BudgetTrackerProps> = ({ budget, guests, onUpdateBudget, isPlanner, onFinalizePath }) => {
   const [showAddInventory, setShowAddInventory] = useState(false);
-  const [newItem, setNewItem] = useState<Partial<InventoryItem>>({ label: '', quantity: 1, unit: 'Cases', source: '', cost: 0 });
+  // Corrected property from 'quantity' to 'currentQuantity' to align with InventoryItem type
+  const [newItem, setNewItem] = useState<Partial<InventoryItem>>({ label: '', currentQuantity: 1, unit: 'Cases', source: '', cost: 0 });
 
   const b = budget.barInventory || { urakLitres: 0, beerCases: 0, mixersCrates: 0 };
-  const customInv = budget.customInventory || [];
+  // Corrected property name from 'customInventory' to 'inventory'
+  const customInv = budget.inventory || [];
 
   const handleAddInventory = () => {
     if (newItem.label) {
       const item: InventoryItem = {
         id: `i-${Date.now()}`,
         label: newItem.label,
-        quantity: newItem.quantity || 0,
+        // Corrected property name from 'quantity' to 'currentQuantity'
+        currentQuantity: newItem.currentQuantity || 0,
         unit: newItem.unit || '',
+        category: 'Consumable', // Added missing required property
         source: newItem.source || '',
         cost: newItem.cost || 0,
         isPurchased: false
       };
-      onUpdateBudget({ customInventory: [...customInv, item] });
-      setNewItem({ label: '', quantity: 1, unit: 'Cases', source: '', cost: 0 });
+      // Synchronized property name with Budget interface
+      onUpdateBudget({ inventory: [...customInv, item] });
+      setNewItem({ label: '', currentQuantity: 1, unit: 'Cases', source: '', cost: 0 });
       setShowAddInventory(false);
     }
   };
 
   const removeInventory = (id: string) => {
-    onUpdateBudget({ customInventory: customInv.filter(i => i.id !== id) });
+    // Synchronized property name with Budget interface
+    onUpdateBudget({ inventory: customInv.filter(i => i.id !== id) });
   };
 
   const togglePurchased = (id: string) => {
-    onUpdateBudget({ customInventory: customInv.map(i => i.id === id ? { ...i, isPurchased: !i.isPurchased } : i) });
+    // Synchronized property name with Budget interface
+    onUpdateBudget({ inventory: customInv.map(i => i.id === id ? { ...i, isPurchased: !i.isPurchased } : i) });
   };
 
   const calculateGrandTotal = () => {
     const committed = budget.committedSpend || 0;
-    const invTotal = customInv.reduce((acc, curr) => acc + curr.cost, 0);
+    const invTotal = customInv.reduce((acc, curr) => acc + (curr.cost || 0), 0);
     // Estimated costs for Bar based on pre-calculated quantities
     const urakCost = b.urakLitres * 1200; // ₹1200/L wholesale
     const beerCost = b.beerCases * 3500; // ₹3500/case
@@ -137,7 +144,7 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ budget, guests, onUpdateB
           <div className="bg-stone-50 p-10 rounded-[3rem] border-2 border-[#D4AF37]/20 mb-12 animate-in slide-in-from-top-4 duration-500">
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <input type="text" placeholder="Item Name (e.g. Wet Tissues)" value={newItem.label} onChange={(e) => setNewItem({ ...newItem, label: e.target.value })} className="bg-white border p-4 rounded-2xl text-sm font-bold shadow-sm" />
-                <input type="number" placeholder="Quantity" value={newItem.quantity} onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) })} className="bg-white border p-4 rounded-2xl text-sm font-bold shadow-sm" />
+                <input type="number" placeholder="Quantity" value={newItem.currentQuantity} onChange={(e) => setNewItem({ ...newItem, currentQuantity: parseInt(e.target.value) })} className="bg-white border p-4 rounded-2xl text-sm font-bold shadow-sm" />
                 <input type="text" placeholder="Unit (Cases/kg/pcs)" value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} className="bg-white border p-4 rounded-2xl text-sm font-bold shadow-sm" />
                 <input type="text" placeholder="Source Wholesaler" value={newItem.source} onChange={(e) => setNewItem({ ...newItem, source: e.target.value })} className="bg-white border p-4 rounded-2xl text-sm font-bold shadow-sm" />
                 <input type="number" placeholder="Est. Cost (₹)" value={newItem.cost} onChange={(e) => setNewItem({ ...newItem, cost: parseInt(e.target.value) })} className="bg-white border p-4 rounded-2xl text-sm font-bold shadow-sm" />
@@ -166,10 +173,10 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ budget, guests, onUpdateB
                          </div>
                       </td>
                       <td className="px-8 py-6">
-                         <p className="text-stone-500 font-bold text-sm">{item.quantity} {item.unit}</p>
+                         <p className="text-stone-500 font-bold text-sm">{item.currentQuantity} {item.unit}</p>
                          <p className="text-[9px] font-black uppercase text-stone-400">{item.source}</p>
                       </td>
-                      <td className="px-8 py-6 font-black text-stone-900">₹{item.cost.toLocaleString()}</td>
+                      <td className="px-8 py-6 font-black text-stone-900">₹{(item.cost || 0).toLocaleString()}</td>
                       <td className="px-8 py-6 text-right">
                          <button onClick={() => removeInventory(item.id)} className="p-3 text-red-400 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Trash2 size={18} /></button>
                       </td>

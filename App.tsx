@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useTransition, useDeferredValue } from 'react';
-import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task, EventCatering } from './types';
+import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task, EventCatering, InventoryItem } from './types';
 import { INITIAL_GUESTS, INITIAL_BUDGET, EVENT_CONFIG, ITINERARY as STATIC_ITINERARY, ROOM_DATABASE as STATIC_ROOMS, VILLA_TASKS } from './constants';
 import Sidebar from './components/Sidebar';
 import DataTable from './components/DataTable';
@@ -13,10 +13,11 @@ import RSVPManager from './components/RSVPManager';
 import GuestPortal from './components/GuestPortal';
 import MealPlan from './components/MealPlan';
 import TaskMatrix from './components/TaskMatrix';
+import InventoryManager from './components/InventoryManager';
 import { Menu, UserPlus, CheckCircle, RefreshCw, Hammer, Database, Users, Utensils } from 'lucide-react';
 
-// ABSOLUTE SOURCE OF TRUTH KEYS
-const STORAGE_KEY = 'ESTATE_DATA_FINAL';
+// ABSOLUTE SOURCE OF TRUTH KEY
+const STORAGE_KEY = 'SRIVASTAVA_ANNIVERSARY_FINAL';
 
 interface AppState {
   guests: Guest[];
@@ -29,7 +30,6 @@ interface AppState {
 
 const App: React.FC = () => {
   const [saveIndicator, setSaveIndicator] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const [appState, setAppState] = useState<AppState>(() => {
@@ -106,50 +106,18 @@ const App: React.FC = () => {
       result[ev] = { adultVeg, adultNonVeg, kidVeg, kidNonVeg };
     });
 
-    // Bar Inventory Logic (Based on Welcome Drink Preferences)
-    let urakCount = 0, beerCount = 0;
-    currentGuests.forEach(g => {
-      if (g.status === 'Confirmed') {
-        if (g.welcomeDrinkPreference === 'Goan Urak') urakCount++;
-        if (g.welcomeDrinkPreference === 'Chilled Beer') beerCount++;
-        g.familyMembers?.forEach(f => {
-          if (f.welcomeDrinkPreference === 'Goan Urak') urakCount++;
-          if (f.welcomeDrinkPreference === 'Chilled Beer') beerCount++;
-        });
-      }
-    });
-
-    const urakLitres = Math.ceil((urakCount * 0.15) * 1.15); // 150ml per head + 15% buffer
-    const beerCases = Math.ceil((beerCount * 3) / 24); // 3 pints per head, 24 in a case
-    const mixersCrates = Math.ceil(urakCount / 5); // 1 crate for every 5 urak drinkers
-
     const gala = result['gala18'];
     return {
       adults: gala.adultVeg + gala.adultNonVeg,
       kids: gala.kidVeg + gala.kidNonVeg,
-      breakdown: result as any,
-      bar: { urakLitres, beerCases, mixersCrates }
+      breakdown: result as any
     };
-  };
-
-  const updateGuests = (newGuests: Guest[]) => {
-    const { adults, kids, breakdown, bar } = calculateCateringPax(newGuests);
-    broadcastUpdate({
-      guests: newGuests,
-      budget: { 
-        ...appState.budget, 
-        finalCateringPax: adults,
-        finalCateringKidsPax: kids,
-        cateringBreakdown: breakdown,
-        barInventory: bar
-      }
-    });
   };
 
   const handleUpdateGuest = useCallback((id: string, updates: Partial<Guest>) => {
     setAppState((prev: AppState) => {
       const newGuests = prev.guests.map((g: Guest) => (g.id === id ? { ...g, ...updates } : g));
-      const { adults, kids, breakdown, bar } = calculateCateringPax(newGuests);
+      const { adults, kids, breakdown } = calculateCateringPax(newGuests);
       const newState = {
         ...prev,
         guests: newGuests,
@@ -158,7 +126,6 @@ const App: React.FC = () => {
           finalCateringPax: adults,
           finalCateringKidsPax: kids,
           cateringBreakdown: breakdown,
-          barInventory: bar
         }
       };
       window.dispatchEvent(new Event('storage'));
@@ -167,6 +134,10 @@ const App: React.FC = () => {
     setSaveIndicator(true);
     setTimeout(() => setSaveIndicator(false), 1500);
   }, []);
+
+  const handleUpdateInventory = (inventory: InventoryItem[]) => {
+    broadcastUpdate({ budget: { ...budget, inventory } });
+  };
 
   const handleFinalizePath = (path: 'Villa' | 'Resort') => {
     const newTasks = path === 'Villa' ? [...appState.tasks, ...VILLA_TASKS] : appState.tasks;
@@ -186,7 +157,7 @@ const App: React.FC = () => {
       <div className="space-y-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
           <div><h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master List</h2><p className="text-stone-500 italic mt-2">Source of Truth for Mummy & Papa's 50th.</p></div>
-          {isPlanner && <button onClick={() => updateGuests([{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Villa-Pool', roomNo: 'TBD', status: 'Pending', dietaryPreference: 'Veg', mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...guests])} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl border-4 border-white hover:scale-105 transition-all"><UserPlus size={18} /> New Guest</button>}
+          {isPlanner && <button onClick={() => broadcastUpdate({ guests: [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Villa-Pool', roomNo: 'TBD', status: 'Pending', dietaryPreference: 'Veg', mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...guests] })} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl border-4 border-white hover:scale-105 transition-all"><UserPlus size={18} /> New Guest</button>}
         </div>
         <DataTable guests={deferredGuests} onUpdate={handleUpdateGuest} columns={[{ key: 'name', label: 'FULL NAME', editable: isPlanner }, { key: 'familyMembers', label: 'PAX & DIET', render: (g) => <div className="flex flex-col gap-1"><span className="text-[10px] font-bold text-stone-800 uppercase">{(g.familyMembers?.length || 0) + 1} Pax</span><span className="text-[8px] font-black bg-stone-100 text-stone-500 px-2 py-0.5 rounded">{g.dietaryPreference || 'Veg'}</span></div> }, { key: 'property', label: 'STAY', editable: isPlanner, type: 'select', options: ['Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] }, { key: 'roomNo', label: 'ROOM', editable: isPlanner }, { key: 'status', label: 'RSVP', editable: isPlanner, type: 'select', options: ['Confirmed', 'Pending', 'Declined'] }]} />
       </div>
@@ -196,8 +167,10 @@ const App: React.FC = () => {
     if (session.lastTab === 'rooms') return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={(no, prop, img) => broadcastUpdate({ rooms: rooms.map(r => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) })} isPlanner={isPlanner} />;
     if (session.lastTab === 'meals') return <MealPlan guests={deferredGuests} budget={budget} onUpdate={handleUpdateGuest} isPlanner={isPlanner} />;
     if (session.lastTab === 'tasks') return <TaskMatrix tasks={tasks} onUpdateTasks={(t) => broadcastUpdate({ tasks: t })} isPlanner={isPlanner} />;
+    if (session.lastTab === 'tree') return <TreeView guests={deferredGuests} />;
     if (session.lastTab === 'budget') return <BudgetTracker budget={budget} onUpdateBudget={(u) => broadcastUpdate({ budget: { ...budget, ...u } })} guests={deferredGuests} isPlanner={isPlanner} onFinalizePath={handleFinalizePath} />;
     if (session.lastTab === 'ai') return <AIPlanner guests={deferredGuests} />;
+    if (session.lastTab === 'inventory') return <InventoryManager guests={deferredGuests} inventory={budget.inventory || []} onUpdate={handleUpdateInventory} isPlanner={isPlanner} />;
     return <div className="p-20 text-center font-serif text-stone-400">Loading...</div>;
   };
 

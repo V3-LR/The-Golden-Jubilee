@@ -16,7 +16,8 @@ import {
   LayoutDashboard,
   LogOut,
   ListTodo,
-  Heart
+  Heart,
+  Package
 } from 'lucide-react';
 import { AppTab, UserRole } from '../types';
 import { EVENT_CONFIG } from '../constants';
@@ -39,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
     { id: 'venue', label: 'Villa & Pool', icon: Map, plannerOnly: false },
     { id: 'rooms', label: 'Room Map', icon: Bed, plannerOnly: false },
     { id: 'meals', label: 'Meal Plan', icon: Utensils, plannerOnly: false },
+    { id: 'inventory', label: 'Inventory Hub', icon: Package, plannerOnly: true },
     { id: 'tasks', label: 'Task Matrix', icon: ListTodo, plannerOnly: true },
     { id: 'tree', label: 'Interactive Tree', icon: GitBranch, plannerOnly: false },
     { id: 'budget', label: 'Budget Tracker', icon: IndianRupee, plannerOnly: true },

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Guest, Budget } from '../types';
-import { Utensils, Coffee, Sun, Moon, Beer, GlassWater, Wine, Package } from 'lucide-react';
+import { MEAL_CONFIG } from '../constants';
+import { Utensils, Coffee, Sun, Moon, Beer, GlassWater, Wine } from 'lucide-react';
 
 interface MealPlanProps {
   guests: Guest[];
@@ -19,10 +20,10 @@ const MealPlan: React.FC<MealPlanProps> = ({ guests, budget, onUpdate, isPlanner
   };
 
   const mealLabels = {
-    lunch17: { label: 'Arrival Lunch', icon: Coffee, date: 'April 17' },
-    dinner17: { label: 'Sangeet Dinner', icon: Moon, date: 'April 17' },
-    lunch18: { label: 'Anniversary Lunch', icon: Sun, date: 'April 18' },
-    gala18: { label: 'Golden Gala', icon: Utensils, date: 'April 18' }
+    lunch17: { label: MEAL_CONFIG.lunch17, icon: Coffee, date: 'April 17' },
+    dinner17: { label: MEAL_CONFIG.dinner17, icon: Moon, date: 'April 17' },
+    lunch18: { label: MEAL_CONFIG.lunch18, icon: Sun, date: 'April 18' },
+    gala18: { label: MEAL_CONFIG.gala18, icon: Utensils, date: 'April 18' }
   };
 
   const bar = budget.barInventory || { urakLitres: 0, beerCases: 0, mixersCrates: 0 };

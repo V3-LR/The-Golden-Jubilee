@@ -93,11 +93,14 @@ export interface EventCatering {
 export interface InventoryItem {
   id: string;
   label: string;
-  quantity: number;
+  currentQuantity: number;
   unit: string;
-  source: string;
-  cost: number;
-  isPurchased: boolean;
+  category: 'Bar' | 'Asset' | 'Garnish' | 'Consumable';
+  source?: string;
+  cost?: number;
+  lastUpdated?: string;
+  // Added isPurchased property to support checklist logic
+  isPurchased?: boolean;
 }
 
 export interface Budget {
@@ -118,7 +121,7 @@ export interface Budget {
     beerCases: number;
     mixersCrates: number;
   };
-  customInventory?: InventoryItem[];
+  inventory?: InventoryItem[];
   cateringBreakdown?: {
     lunch17: EventCatering;
     dinner17: EventCatering;
@@ -157,4 +160,4 @@ export interface Quotation {
   effortScore: EffortLevel;
 }
 
-export type AppTab = 'master' | 'venue' | 'rooms' | 'meals' | 'tasks' | 'tree' | 'budget' | 'ai' | 'rsvp-manager' | 'portal';
+export type AppTab = 'master' | 'venue' | 'rooms' | 'meals' | 'tasks' | 'tree' | 'budget' | 'ai' | 'rsvp-manager' | 'portal' | 'inventory';

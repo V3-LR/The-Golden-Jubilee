@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
 import { Guest } from '../types';
+import { MEAL_CONFIG } from '../constants';
 import { ChevronRight, ChevronDown, User, MapPin, Coffee, Shirt, Users } from 'lucide-react';
 
 interface TreeViewProps {
@@ -67,7 +67,7 @@ const TreeView: React.FC<TreeViewProps> = ({ guests }) => {
                     <Coffee size={16} className="text-stone-400 mt-1" />
                     <div>
                       <p className="text-xs text-stone-500 uppercase font-bold">Meal Preference</p>
-                      <p className="text-sm text-stone-800">{guest.dietaryNote} — {guest.mealPlan.dinner18}</p>
+                      <p className="text-sm text-stone-800">{guest.dietaryNote} — {MEAL_CONFIG.gala18}: {guest.mealPlan.gala18}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">

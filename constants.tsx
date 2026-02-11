@@ -9,6 +9,13 @@ export const EVENT_CONFIG = {
   guestAccessCode: "000000"
 };
 
+export const MEAL_CONFIG = {
+  lunch17: "Arrival Lunch",
+  dinner17: "Sangeet Dinner",
+  lunch18: "Anniversary Lunch",
+  gala18: "Gala Dinner"
+};
+
 export const PROPERTY_LOCATIONS = {
   FAMILY_ESTATE: {
     name: "Lilia by Rustic Roofs",
@@ -41,6 +48,26 @@ export const ITINERARY: EventFunction[] = [
     location: 'Grand Hall, Red Villa',
     dressCode: 'Indo-Western Glitz',
     description: 'Family performances and DJ Savio.',
+    image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80'
+  },
+  {
+    id: 'evt-3',
+    title: 'Anniversary Lunch',
+    date: 'April 18, 2026',
+    time: '1:00 PM',
+    location: 'Garden Lawns',
+    dressCode: 'Pastel Formals',
+    description: 'A traditional sit-down lunch to honor the journey.',
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80'
+  },
+  {
+    id: 'evt-4',
+    title: 'Gala Dinner',
+    date: 'April 18, 2026',
+    time: '8:00 PM',
+    location: 'AC Ballroom, Resort',
+    dressCode: 'Black Tie / Tuxedos',
+    description: 'The grand finale celebration of 50 golden years.',
     image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80'
   }
 ];
@@ -126,9 +153,9 @@ export const INITIAL_BUDGET: Budget = {
     beerCases: 0,
     mixersCrates: 0
   },
-  customInventory: [
-    { id: 'i-1', label: 'Bottled Water (250ml)', quantity: 20, unit: 'Cases', source: 'Vasco Wholesaler', cost: 6000, isPurchased: false },
-    { id: 'i-2', label: 'Ice Blocks', quantity: 200, unit: 'kg', source: 'Local Delivery', cost: 4000, isPurchased: false }
+  inventory: [
+    { id: 'i-1', label: 'Bottled Water (250ml)', currentQuantity: 20, unit: 'Cases', category: 'Consumable', source: 'Vasco Wholesaler', cost: 6000, isPurchased: false },
+    { id: 'i-2', label: 'Ice Blocks', currentQuantity: 200, unit: 'kg', category: 'Consumable', source: 'Local Delivery', cost: 4000, isPurchased: false }
   ],
   cateringBreakdown: {
     lunch17: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 },
