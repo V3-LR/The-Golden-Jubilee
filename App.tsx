@@ -61,6 +61,29 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isPlanner = session.role === 'planner';
 
+  // MAGIC LINK DETECTION: Detects ?id=guest-xyz in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlGuestId = params.get('id');
+    
+    if (urlGuestId) {
+      const guestExists = guests.some(g => g.id === urlGuestId);
+      if (guestExists) {
+        setAppState(prev => ({
+          ...prev,
+          session: {
+            ...prev.session,
+            role: 'guest',
+            guestId: urlGuestId,
+            lastTab: 'portal'
+          }
+        }));
+        // Optional: Clean up URL after successful login
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, []);
+
   // Master Sync Function
   const performSync = useCallback((stateToSave: AppState) => {
     setIsSyncing(true);
@@ -195,8 +218,12 @@ const App: React.FC = () => {
   if (!session.role) return <Login onLogin={(r, id) => broadcastUpdate({ session: { ...session, role: r, guestId: id || null, lastTab: id ? 'portal' : 'master' } })} />;
 
   const renderContent = () => {
-    const currentGuest = deferredGuests.find((g: Guest) => g.id === session.guestId) || deferredGuests[0];
-    if (session.lastTab === 'portal') return <GuestPortal guest={currentGuest} onUpdate={handleUpdateGuest} roomDatabase={rooms} itinerary={itinerary} isPlanner={isPlanner} onUpdateEventImage={(id, img) => broadcastUpdate({ itinerary: itinerary.map(e => e.id === id ? { ...e, image: img } : e) })} onUpdateRoomImage={(no, prop, img) => handleUpdateRoom(no, prop as PropertyType, { image: img })} onBackToMaster={() => broadcastUpdate({ session: { ...session, lastTab: 'master' } })} />;
+    const currentGuest = deferredGuests.find((g: Guest) => g.id === session.guestId) || (session.role === 'planner' ? deferredGuests[0] : null);
+    
+    // If guest role but no guest found, force login
+    if (session.role === 'guest' && !currentGuest) return <Login onLogin={(r, id) => broadcastUpdate({ session: { ...session, role: r, guestId: id || null, lastTab: 'portal' } })} />;
+
+    if (session.lastTab === 'portal') return <GuestPortal guest={currentGuest!} onUpdate={handleUpdateGuest} roomDatabase={rooms} itinerary={itinerary} isPlanner={isPlanner} onUpdateEventImage={(id, img) => broadcastUpdate({ itinerary: itinerary.map(e => e.id === id ? { ...e, image: img } : e) })} onUpdateRoomImage={(no, prop, img) => handleUpdateRoom(no, prop as PropertyType, { image: img })} onBackToMaster={() => broadcastUpdate({ session: { ...session, lastTab: 'master' } })} />;
     if (session.lastTab === 'master') return (
       <div className="space-y-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
