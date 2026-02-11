@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Guest } from '../types';
 import { Edit3, Lock } from 'lucide-react';
 
@@ -14,6 +14,48 @@ interface DataTableProps {
     options?: string[];
   }[];
 }
+
+// Sub-component to manage local typing state to prevent global re-renders
+const EditableCell: React.FC<{
+  value: string;
+  onCommit: (val: string) => void;
+  isEditing: boolean;
+  onFocus: () => void;
+  onBlur: () => void;
+}> = ({ value, onCommit, isEditing, onFocus, onBlur }) => {
+  const [localValue, setLocalValue] = useState(value);
+
+  // Sync local value when external value changes (but only if not currently editing)
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalValue(value);
+    }
+  }, [value, isEditing]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      onCommit(localValue);
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      className={`bg-white border-2 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/10 w-full transition-all font-bold text-stone-900 shadow-sm ${
+        isEditing ? 'border-[#D4AF37]' : 'border-stone-100'
+      }`}
+      value={localValue}
+      onFocus={onFocus}
+      onBlur={() => {
+        onBlur();
+        if (localValue !== value) onCommit(localValue);
+      }}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onKeyDown={handleKeyDown}
+    />
+  );
+};
 
 const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,15 +119,12 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                className={`bg-white border-2 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/10 w-full transition-all font-bold text-stone-900 shadow-sm ${
-                                  editingId === `${guest.id}-${col.key}` ? 'border-[#D4AF37]' : 'border-stone-100'
-                                }`}
+                              <EditableCell
                                 value={String(guest[col.key as keyof Guest] || '')}
+                                onCommit={(val) => onUpdate(guest.id, { [col.key]: val })}
+                                isEditing={editingId === `${guest.id}-${col.key}`}
                                 onFocus={() => setEditingId(`${guest.id}-${col.key}`)}
                                 onBlur={() => setEditingId(null)}
-                                onChange={(e) => onUpdate(guest.id, { [col.key]: e.target.value })}
                               />
                             </div>
                           )}

@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect, useTransition, useDeferredValue } from 'react';
-import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task, EventCatering, InventoryItem } from './types';
+import React, { useState, useCallback, useEffect, useTransition, useDeferredValue, useRef } from 'react';
+import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task, EventCatering, InventoryItem, PropertyType } from './types';
 import { INITIAL_GUESTS, INITIAL_BUDGET, EVENT_CONFIG, ITINERARY as STATIC_ITINERARY, ROOM_DATABASE as STATIC_ROOMS, VILLA_TASKS } from './constants';
 import Sidebar from './components/Sidebar';
 import DataTable from './components/DataTable';
@@ -14,10 +14,11 @@ import GuestPortal from './components/GuestPortal';
 import MealPlan from './components/MealPlan';
 import TaskMatrix from './components/TaskMatrix';
 import InventoryManager from './components/InventoryManager';
-import { Menu, UserPlus, CheckCircle, RefreshCw, Hammer, Database, Users, Utensils } from 'lucide-react';
+import { Menu, UserPlus, CheckCircle, RefreshCw, Hammer, Database, Users, Utensils, Save } from 'lucide-react';
 
 // ABSOLUTE SOURCE OF TRUTH KEY
 const STORAGE_KEY = 'SRIVASTAVA_ANNIVERSARY_FINAL';
+const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 interface AppState {
   guests: Guest[];
@@ -29,8 +30,11 @@ interface AppState {
 }
 
 const App: React.FC = () => {
-  const [saveIndicator, setSaveIndicator] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date>(new Date());
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const syncTimerRef = useRef<number | null>(null);
 
   const [appState, setAppState] = useState<AppState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -57,6 +61,35 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isPlanner = session.role === 'planner';
 
+  // Master Sync Function
+  const performSync = useCallback((stateToSave: AppState) => {
+    setIsSyncing(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+      setLastSynced(new Date());
+      setHasUnsavedChanges(false);
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {
+      console.error("Sync failed", e);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 800);
+    }
+  }, []);
+
+  // Automatic Sync Interval: 5 Minutes
+  useEffect(() => {
+    syncTimerRef.current = window.setInterval(() => {
+      setAppState(current => {
+        performSync(current);
+        return current;
+      });
+    }, SYNC_INTERVAL);
+
+    return () => {
+      if (syncTimerRef.current) clearInterval(syncTimerRef.current);
+    };
+  }, [performSync]);
+
   useEffect(() => {
     const handleGlobalSync = (e: StorageEvent | Event) => {
       const rawData = localStorage.getItem(STORAGE_KEY);
@@ -64,6 +97,8 @@ const App: React.FC = () => {
         try {
           const freshData = JSON.parse(rawData);
           setAppState(freshData);
+          setLastSynced(new Date());
+          setHasUnsavedChanges(false);
         } catch (err) { console.error("Sync error", err); }
       }
     };
@@ -71,19 +106,13 @@ const App: React.FC = () => {
     return () => window.removeEventListener('storage', handleGlobalSync);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-  }, [appState]);
-
   const broadcastUpdate = (updatesOrFn: Partial<AppState> | ((prev: AppState) => Partial<AppState>)) => {
     setAppState((prev: AppState) => {
       const updates = typeof updatesOrFn === 'function' ? updatesOrFn(prev) : updatesOrFn;
       const newState = { ...prev, ...updates };
-      window.dispatchEvent(new Event('storage'));
+      setHasUnsavedChanges(true);
       return newState;
     });
-    setSaveIndicator(true);
-    setTimeout(() => setSaveIndicator(false), 1500);
   };
 
   const calculateCateringPax = (currentGuests: Guest[]) => {
@@ -118,7 +147,8 @@ const App: React.FC = () => {
     setAppState((prev: AppState) => {
       const newGuests = prev.guests.map((g: Guest) => (g.id === id ? { ...g, ...updates } : g));
       const { adults, kids, breakdown } = calculateCateringPax(newGuests);
-      const newState = {
+      setHasUnsavedChanges(true);
+      return {
         ...prev,
         guests: newGuests,
         budget: {
@@ -128,15 +158,25 @@ const App: React.FC = () => {
           cateringBreakdown: breakdown,
         }
       };
-      window.dispatchEvent(new Event('storage'));
-      return newState;
     });
-    setSaveIndicator(true);
-    setTimeout(() => setSaveIndicator(false), 1500);
   }, []);
 
   const handleUpdateInventory = (inventory: InventoryItem[]) => {
     broadcastUpdate({ budget: { ...budget, inventory } });
+  };
+
+  const handleAddRoom = (newRoom: RoomDetail) => {
+    broadcastUpdate({ rooms: [...rooms, newRoom] });
+  };
+
+  const handleDeleteRoom = (roomNo: string, property: PropertyType) => {
+    broadcastUpdate({ rooms: rooms.filter(r => !(r.roomNo === roomNo && r.property === property)) });
+  };
+
+  const handleUpdateRoom = (roomNo: string, property: PropertyType, updates: Partial<RoomDetail>) => {
+    broadcastUpdate({
+      rooms: rooms.map(r => (r.roomNo === roomNo && r.property === property) ? { ...r, ...updates } : r)
+    });
   };
 
   const handleFinalizePath = (path: 'Villa' | 'Resort') => {
@@ -148,11 +188,15 @@ const App: React.FC = () => {
     });
   };
 
+  const handleManualSync = () => {
+    performSync(appState);
+  };
+
   if (!session.role) return <Login onLogin={(r, id) => broadcastUpdate({ session: { ...session, role: r, guestId: id || null, lastTab: id ? 'portal' : 'master' } })} />;
 
   const renderContent = () => {
     const currentGuest = deferredGuests.find((g: Guest) => g.id === session.guestId) || deferredGuests[0];
-    if (session.lastTab === 'portal') return <GuestPortal guest={currentGuest} onUpdate={handleUpdateGuest} roomDatabase={rooms} itinerary={itinerary} isPlanner={isPlanner} onUpdateEventImage={(id, img) => broadcastUpdate({ itinerary: itinerary.map(e => e.id === id ? { ...e, image: img } : e) })} onUpdateRoomImage={(no, prop, img) => broadcastUpdate({ rooms: rooms.map(r => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) })} onBackToMaster={() => broadcastUpdate({ session: { ...session, lastTab: 'master' } })} />;
+    if (session.lastTab === 'portal') return <GuestPortal guest={currentGuest} onUpdate={handleUpdateGuest} roomDatabase={rooms} itinerary={itinerary} isPlanner={isPlanner} onUpdateEventImage={(id, img) => broadcastUpdate({ itinerary: itinerary.map(e => e.id === id ? { ...e, image: img } : e) })} onUpdateRoomImage={(no, prop, img) => handleUpdateRoom(no, prop as PropertyType, { image: img })} onBackToMaster={() => broadcastUpdate({ session: { ...session, lastTab: 'master' } })} />;
     if (session.lastTab === 'master') return (
       <div className="space-y-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
@@ -163,8 +207,8 @@ const App: React.FC = () => {
       </div>
     );
     if (session.lastTab === 'rsvp-manager') return <RSVPManager guests={deferredGuests} onUpdate={handleUpdateGuest} role={session.role} onTeleport={(id) => broadcastUpdate({ session: { ...session, guestId: id, lastTab: 'portal' } })} />;
-    if (session.lastTab === 'venue') return <VenueOverview onUpdateRoomImage={(no, prop, img) => broadcastUpdate({ rooms: rooms.map(r => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) })} rooms={rooms} isPlanner={isPlanner} />;
-    if (session.lastTab === 'rooms') return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={(no, prop, img) => broadcastUpdate({ rooms: rooms.map(r => (r.roomNo === no && r.property === prop) ? { ...r, image: img } : r) })} isPlanner={isPlanner} />;
+    if (session.lastTab === 'venue') return <VenueOverview onUpdateRoomImage={(no, prop, img) => handleUpdateRoom(no, prop as PropertyType, { image: img })} rooms={rooms} isPlanner={isPlanner} />;
+    if (session.lastTab === 'rooms') return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={(no, prop, img) => handleUpdateRoom(no, prop as PropertyType, { image: img })} onAddRoom={handleAddRoom} onUpdateRoom={handleUpdateRoom} onDeleteRoom={handleDeleteRoom} isPlanner={isPlanner} />;
     if (session.lastTab === 'meals') return <MealPlan guests={deferredGuests} budget={budget} onUpdate={handleUpdateGuest} isPlanner={isPlanner} />;
     if (session.lastTab === 'tasks') return <TaskMatrix tasks={tasks} onUpdateTasks={(t) => broadcastUpdate({ tasks: t })} isPlanner={isPlanner} />;
     if (session.lastTab === 'tree') return <TreeView guests={deferredGuests} />;
@@ -182,7 +226,33 @@ const App: React.FC = () => {
           <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[100] border-b border-[#D4AF37]/10">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={24} /></button>
             <div className="hidden md:block"><p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Sunehri Saalgira Online</p><h1 className="text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h1></div>
-            <div className="flex items-center gap-3">{saveIndicator ? <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full"><CheckCircle size={16} className="text-[#D4AF37]" /><span className="text-[10px] font-black uppercase tracking-widest">Master Synced</span></div> : <div className="flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-full border border-stone-100 opacity-50"><RefreshCw size={16} /><span className="text-[10px] font-black uppercase tracking-widest">Standby</span></div>}</div>
+            <div className="flex items-center gap-3">
+              {isSyncing ? (
+                <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-pulse">
+                  <RefreshCw size={16} className="animate-spin text-[#D4AF37]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Syncing Master...</span>
+                </div>
+              ) : (
+                <button 
+                  onClick={handleManualSync}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-full border transition-all ${
+                    hasUnsavedChanges 
+                    ? 'bg-amber-50 border-amber-200 text-amber-600 shadow-lg scale-105' 
+                    : 'bg-white border-stone-100 text-stone-400 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  {hasUnsavedChanges ? <Save size={16} className="animate-bounce" /> : <CheckCircle size={16} className="text-green-500" />}
+                  <div className="flex flex-col items-start">
+                    <span className="text-[8px] font-black uppercase tracking-widest">
+                      {hasUnsavedChanges ? 'Draft Changes (Sync Now)' : 'Master Synced'}
+                    </span>
+                    <span className="text-[7px] font-bold uppercase">
+                      Last: {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </button>
+              )}
+            </div>
           </header>
         )}
         <div className={`${session.role === 'guest' ? 'w-full' : 'max-w-7xl mx-auto px-4 md:px-10 py-10'}`}>{renderContent()}</div>
