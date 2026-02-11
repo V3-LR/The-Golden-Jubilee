@@ -17,7 +17,7 @@ import InventoryManager from './components/InventoryManager';
 import { Menu, UserPlus, CheckCircle, RefreshCw, Hammer, Database, Users, Utensils, Save } from 'lucide-react';
 
 // ABSOLUTE SOURCE OF TRUTH KEY
-const STORAGE_KEY = 'SRIVASTAVA_ANNIVERSARY_FINAL';
+const STORAGE_KEY = 'SRIVASTAVA_ANNIVERSARY_FINAL_V3';
 const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 interface AppState {
@@ -59,28 +59,35 @@ const App: React.FC = () => {
   const { guests, rooms, itinerary, budget, tasks, session } = appState;
   const deferredGuests = useDeferredValue(guests);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // A user is a planner if their session role is explicitly 'planner'
   const isPlanner = session.role === 'planner';
 
-  // MAGIC LINK DETECTION: Detects ?id=guest-xyz in URL
+  // MAGIC LINK DETECTION: Robust handler for personalized URLs
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlGuestId = params.get('id');
     
     if (urlGuestId) {
-      const guestExists = guests.some(g => g.id === urlGuestId);
-      if (guestExists) {
-        setAppState(prev => ({
-          ...prev,
-          session: {
-            ...prev.session,
-            role: 'guest',
-            guestId: urlGuestId,
-            lastTab: 'portal'
-          }
-        }));
-        // Optional: Clean up URL after successful login
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
+      setAppState(prev => {
+        const targetGuest = prev.guests.find(g => g.id === urlGuestId);
+        if (targetGuest) {
+          return {
+            ...prev,
+            session: {
+              ...prev.session,
+              // If already a planner, keep the role. Otherwise, it's a guest login.
+              role: prev.session.role === 'planner' ? 'planner' : 'guest',
+              guestId: urlGuestId,
+              lastTab: 'portal'
+            }
+          };
+        }
+        return prev;
+      });
+      // Clean URL for aesthetics so users don't bookmark the guest ID accidentally
+      const newUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
     }
   }, []);
 
@@ -129,14 +136,14 @@ const App: React.FC = () => {
     return () => window.removeEventListener('storage', handleGlobalSync);
   }, []);
 
-  const broadcastUpdate = (updatesOrFn: Partial<AppState> | ((prev: AppState) => Partial<AppState>)) => {
+  const broadcastUpdate = useCallback((updatesOrFn: Partial<AppState> | ((prev: AppState) => Partial<AppState>)) => {
     setAppState((prev: AppState) => {
       const updates = typeof updatesOrFn === 'function' ? updatesOrFn(prev) : updatesOrFn;
       const newState = { ...prev, ...updates };
       setHasUnsavedChanges(true);
       return newState;
     });
-  };
+  }, []);
 
   const calculateCateringPax = (currentGuests: Guest[]) => {
     const events = ['lunch17', 'dinner17', 'lunch18', 'gala18'] as const;
@@ -185,29 +192,31 @@ const App: React.FC = () => {
   }, []);
 
   const handleUpdateInventory = (inventory: InventoryItem[]) => {
-    broadcastUpdate({ budget: { ...budget, inventory } });
+    broadcastUpdate(prev => ({ budget: { ...prev.budget, inventory } }));
   };
 
   const handleAddRoom = (newRoom: RoomDetail) => {
-    broadcastUpdate({ rooms: [...rooms, newRoom] });
+    broadcastUpdate(prev => ({ rooms: [...prev.rooms, newRoom] }));
   };
 
   const handleDeleteRoom = (roomNo: string, property: PropertyType) => {
-    broadcastUpdate({ rooms: rooms.filter(r => !(r.roomNo === roomNo && r.property === property)) });
+    broadcastUpdate(prev => ({ rooms: prev.rooms.filter(r => !(r.roomNo === roomNo && r.property === property)) }));
   };
 
   const handleUpdateRoom = (roomNo: string, property: PropertyType, updates: Partial<RoomDetail>) => {
-    broadcastUpdate({
-      rooms: rooms.map(r => (r.roomNo === roomNo && r.property === property) ? { ...r, ...updates } : r)
-    });
+    broadcastUpdate(prev => ({
+      rooms: prev.rooms.map(r => (r.roomNo === roomNo && r.property === property) ? { ...r, ...updates } : r)
+    }));
   };
 
   const handleFinalizePath = (path: 'Villa' | 'Resort') => {
-    const newTasks = path === 'Villa' ? [...appState.tasks, ...VILLA_TASKS] : appState.tasks;
-    const committedAmount = path === 'Villa' ? 310000 : 485500;
-    broadcastUpdate({
-      tasks: newTasks,
-      budget: { ...appState.budget, selectedPath: path, committedSpend: committedAmount }
+    broadcastUpdate(prev => {
+      const newTasks = path === 'Villa' ? [...prev.tasks, ...VILLA_TASKS] : prev.tasks;
+      const committedAmount = path === 'Villa' ? 310000 : 485500;
+      return {
+        tasks: newTasks,
+        budget: { ...prev.budget, selectedPath: path, committedSpend: committedAmount }
+      };
     });
   };
 
@@ -220,15 +229,26 @@ const App: React.FC = () => {
   const renderContent = () => {
     const currentGuest = deferredGuests.find((g: Guest) => g.id === session.guestId) || (session.role === 'planner' ? deferredGuests[0] : null);
     
-    // If guest role but no guest found, force login
     if (session.role === 'guest' && !currentGuest) return <Login onLogin={(r, id) => broadcastUpdate({ session: { ...session, role: r, guestId: id || null, lastTab: 'portal' } })} />;
 
-    if (session.lastTab === 'portal') return <GuestPortal guest={currentGuest!} onUpdate={handleUpdateGuest} roomDatabase={rooms} itinerary={itinerary} isPlanner={isPlanner} onUpdateEventImage={(id, img) => broadcastUpdate({ itinerary: itinerary.map(e => e.id === id ? { ...e, image: img } : e) })} onUpdateRoomImage={(no, prop, img) => handleUpdateRoom(no, prop as PropertyType, { image: img })} onBackToMaster={() => broadcastUpdate({ session: { ...session, lastTab: 'master' } })} />;
+    if (session.lastTab === 'portal') return (
+      <GuestPortal 
+        guest={currentGuest!} 
+        onUpdate={handleUpdateGuest} 
+        roomDatabase={rooms} 
+        itinerary={itinerary} 
+        isPlanner={isPlanner} 
+        onUpdateEventImage={(id, img) => broadcastUpdate(prev => ({ itinerary: prev.itinerary.map(e => e.id === id ? { ...e, image: img } : e) }))} 
+        onUpdateRoomImage={(no, prop, img) => handleUpdateRoom(no, prop as PropertyType, { image: img })} 
+        onBackToMaster={() => broadcastUpdate({ session: { ...session, guestId: null, lastTab: 'master' } })} 
+      />
+    );
+    
     if (session.lastTab === 'master') return (
       <div className="space-y-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
           <div><h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master List</h2><p className="text-stone-500 italic mt-2">Source of Truth for Mummy & Papa's 50th.</p></div>
-          {isPlanner && <button onClick={() => broadcastUpdate({ guests: [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Villa-Pool', roomNo: 'TBD', status: 'Pending', dietaryPreference: 'Veg', mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...guests] })} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl border-4 border-white hover:scale-105 transition-all"><UserPlus size={18} /> New Guest</button>}
+          {isPlanner && <button onClick={() => broadcastUpdate(prev => ({ guests: [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Villa-Pool', roomNo: 'TBD', status: 'Pending', dietaryPreference: 'Veg', mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...prev.guests] }))} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl border-4 border-white hover:scale-105 transition-all"><UserPlus size={18} /> New Guest</button>}
         </div>
         <DataTable guests={deferredGuests} onUpdate={handleUpdateGuest} columns={[{ key: 'name', label: 'FULL NAME', editable: isPlanner }, { key: 'familyMembers', label: 'PAX & DIET', render: (g) => <div className="flex flex-col gap-1"><span className="text-[10px] font-bold text-stone-800 uppercase">{(g.familyMembers?.length || 0) + 1} Pax</span><span className="text-[8px] font-black bg-stone-100 text-stone-500 px-2 py-0.5 rounded">{g.dietaryPreference || 'Veg'}</span></div> }, { key: 'property', label: 'STAY', editable: isPlanner, type: 'select', options: ['Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] }, { key: 'roomNo', label: 'ROOM', editable: isPlanner }, { key: 'status', label: 'RSVP', editable: isPlanner, type: 'select', options: ['Confirmed', 'Pending', 'Declined'] }]} />
       </div>
@@ -239,7 +259,7 @@ const App: React.FC = () => {
     if (session.lastTab === 'meals') return <MealPlan guests={deferredGuests} budget={budget} onUpdate={handleUpdateGuest} isPlanner={isPlanner} />;
     if (session.lastTab === 'tasks') return <TaskMatrix tasks={tasks} onUpdateTasks={(t) => broadcastUpdate({ tasks: t })} isPlanner={isPlanner} />;
     if (session.lastTab === 'tree') return <TreeView guests={deferredGuests} />;
-    if (session.lastTab === 'budget') return <BudgetTracker budget={budget} onUpdateBudget={(u) => broadcastUpdate({ budget: { ...budget, ...u } })} guests={deferredGuests} isPlanner={isPlanner} onFinalizePath={handleFinalizePath} />;
+    if (session.lastTab === 'budget') return <BudgetTracker budget={budget} onUpdateBudget={(u) => broadcastUpdate(prev => ({ budget: { ...prev.budget, ...u } }))} guests={deferredGuests} isPlanner={isPlanner} onFinalizePath={handleFinalizePath} />;
     if (session.lastTab === 'ai') return <AIPlanner guests={deferredGuests} />;
     if (session.lastTab === 'inventory') return <InventoryManager guests={deferredGuests} inventory={budget.inventory || []} onUpdate={handleUpdateInventory} isPlanner={isPlanner} />;
     return <div className="p-20 text-center font-serif text-stone-400">Loading...</div>;
@@ -247,12 +267,19 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FCFAF2] flex flex-col lg:flex-row">
-      {session.role !== 'guest' && <Sidebar activeTab={session.lastTab as AppTab} setActiveTab={(t) => broadcastUpdate({ session: { ...session, lastTab: t } })} role={session.role} onLogout={() => broadcastUpdate({ session: { role: null, guestId: null, lastTab: 'master' } })} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />}
-      <main className={`flex-grow min-h-screen w-full transition-all ${session.role !== 'guest' ? 'lg:ml-64' : ''}`}>
-        {session.role !== 'guest' && (
+      {/* Sidebar is ONLY hidden if user is role 'guest'. If they are a 'planner' viewing a portal, sidebar stays. */}
+      {session.role === 'planner' && (
+        <Sidebar activeTab={session.lastTab as AppTab} setActiveTab={(t) => broadcastUpdate({ session: { ...session, lastTab: t } })} role={session.role} onLogout={() => broadcastUpdate({ session: { role: null, guestId: null, lastTab: 'master' } })} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      )}
+      
+      <main className={`flex-grow min-h-screen w-full transition-all ${session.role === 'planner' ? 'lg:ml-64' : ''}`}>
+        {session.role === 'planner' && (
           <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[100] border-b border-[#D4AF37]/10">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={24} /></button>
-            <div className="hidden md:block"><p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Sunehri Saalgira Online</p><h1 className="text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h1></div>
+            <div className="hidden md:block cursor-pointer" onClick={() => broadcastUpdate({ session: { ...session, lastTab: 'master', guestId: null } })}>
+              <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Sunehri Saalgira Online</p>
+              <h1 className="text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h1>
+            </div>
             <div className="flex items-center gap-3">
               {isSyncing ? (
                 <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-pulse">

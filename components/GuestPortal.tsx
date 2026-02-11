@@ -26,6 +26,13 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
   const room = roomDatabase.find(r => r.roomNo === guest.roomNo && r.property === guest.property);
   const locationInfo = ['Villa-Pool', 'Villa-Hall', 'TreeHouse'].includes(guest.property) ? PROPERTY_LOCATIONS.FAMILY_ESTATE : PROPERTY_LOCATIONS.RESORT;
 
+  // Robust name personalization
+  const getFirstName = (fullName: string) => {
+    if (!fullName) return 'Guest';
+    const parts = fullName.trim().split(' ');
+    return parts[0];
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && uploadTarget) {
@@ -81,7 +88,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
           </div>
           <div className="space-y-4">
             <p className="font-cinzel text-[#B8860B] text-xl uppercase tracking-[0.5em] animate-pulse">Hum Aatishbaz hain!</p>
-            <h1 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 leading-tight">Pranam, <br/><span className="gold-text-gradient">{guest.name.split(' ')[0]}</span></h1>
+            <h1 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 leading-tight">Pranam, <br/><span className="gold-text-gradient">{getFirstName(guest.name)}</span></h1>
           </div>
           
           <div className="max-w-md mx-auto">
@@ -163,7 +170,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
         <h2 className="text-4xl font-serif font-bold text-stone-900 text-center md:text-left">Your Celebration <span className="text-[#B8860B]">Timeline</span></h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {itinerary.map((event) => (
-            <div key={event.id} className="bg-white rounded-[4rem] p-12 border border-stone-100 shadow-2xl space-y-8 group transition-all relative overflow-hidden">
+            <div key={`${event.id}-${event.image}`} className="bg-white rounded-[4rem] p-12 border border-stone-100 shadow-2xl space-y-8 group transition-all relative overflow-hidden">
               <div className="flex items-center justify-between relative z-10">
                 <div className="flex items-center gap-3 text-[#D4AF37]">
                    <Clock size={20} />
