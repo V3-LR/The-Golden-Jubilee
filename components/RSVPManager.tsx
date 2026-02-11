@@ -156,10 +156,9 @@ Hum aapke aagman ki pratiksha karenge! 🧡`;
         </div>
       </div>
 
-      {/* Invitation Card Modal */}
+      {/* Ornate Invitation Card Modal */}
       {selectedForCard && (
         <div className="fixed inset-0 bg-stone-900/98 z-[500] flex items-center justify-center p-4 overflow-y-auto">
-          {/* FIXED CLOSE BUTTON */}
           <button 
             onClick={() => setSelectedForCard(null)}
             className="fixed top-8 right-8 z-[510] bg-[#D4AF37] text-stone-900 p-5 rounded-full shadow-[0_0_50px_rgba(212,175,55,0.6)] hover:scale-110 transition-all border-4 border-white"
@@ -168,55 +167,70 @@ Hum aapke aagman ki pratiksha karenge! 🧡`;
           </button>
 
           <div className="max-w-md w-full relative py-12 md:py-20 animate-in zoom-in duration-500">
-            <div className="bg-white rounded-[4rem] overflow-hidden shadow-[0_0_120px_rgba(212,175,55,0.4)] border-8 border-white">
-               <div className="relative h-64 overflow-hidden">
-                  <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80" className="w-full h-full object-cover" alt="Villa" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent"></div>
+            {/* Main Card Container with Ornate Styling */}
+            <div className="bg-[#FDFBF7] rounded-[4rem] overflow-hidden shadow-[0_0_120px_rgba(212,175,55,0.4)] border-8 border-white relative">
+               
+               {/* Decorative Floral Corners (SVG simplified) */}
+               <div className="absolute top-0 left-0 p-8 opacity-40 pointer-events-none">
+                 <Heart size={80} className="text-[#D4AF37]/20" />
+               </div>
+               <div className="absolute bottom-0 right-0 p-8 opacity-40 pointer-events-none">
+                 <Heart size={80} className="text-[#D4AF37]/20" />
                </div>
 
-               <div className="px-10 pb-16 pt-2 text-center space-y-8 bg-[#FCFAF2]">
+               <div className="relative h-64 overflow-hidden border-b-4 border-white">
+                  <img src={selectedForCard.property === 'Villa-Pool' ? 'https://images.unsplash.com/photo-1628592102751-ba83b03bc42e?auto=format&fit=crop&q=80' : 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80'} className="w-full h-full object-cover" alt="Villa" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#FDFBF7] via-transparent to-transparent"></div>
+               </div>
+
+               <div className="px-10 pb-12 pt-2 text-center space-y-8">
                   <div className="space-y-3">
                      <p className="font-cinzel text-[#B8860B] text-lg uppercase tracking-[0.5em]">Goa Bulaye Re!</p>
-                     <h1 className="text-4xl font-serif font-bold text-stone-900">Mummy & Papa ki <br/><span className="text-[#B8860B]">50vi Saalgira</span></h1>
+                     <h1 className="text-4xl font-serif font-bold text-stone-900 leading-tight">Mummy & Papa ki <br/><span className="text-[#B8860B]">50vi Saalgira</span></h1>
                   </div>
 
-                  <div className="bg-white p-8 rounded-[3rem] border border-[#D4AF37]/20 shadow-sm">
+                  <div className="bg-white/60 backdrop-blur-sm p-8 rounded-[3rem] border-2 border-[#D4AF37]/20 shadow-sm relative overflow-hidden">
+                     <div className="absolute inset-0 border border-[#D4AF37]/10 m-1 rounded-[2.8rem] pointer-events-none"></div>
                      <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1">Honored Guest</p>
-                     <h3 className="text-3xl font-serif font-bold text-stone-900">{selectedForCard.name} Ji</h3>
-                     {selectedForCard.familyMembers && selectedForCard.familyMembers.length > 0 && (
-                        <p className="text-[10px] text-stone-400 font-bold mt-2 uppercase">Plus {selectedForCard.familyMembers.length} Family Members</p>
+                     <h3 className="text-3xl font-serif font-bold text-stone-900 tracking-tight">{selectedForCard.name} Ji</h3>
+                     {selectedForCard.paxCount && selectedForCard.paxCount > 1 && (
+                        <p className="text-[10px] text-stone-400 font-bold mt-2 uppercase tracking-widest">PLUS {selectedForCard.paxCount - 1} FAMILY MEMBERS</p>
                      )}
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 text-left">
-                     <div className="bg-white p-6 rounded-3xl border border-stone-100 flex items-center gap-5">
+                     <div className="bg-white/80 p-6 rounded-3xl border border-stone-100 flex items-center gap-5">
                         <div className="w-12 h-12 bg-[#FEF9E7] rounded-2xl flex items-center justify-center text-[#B8860B]">
-                           <Zap size={20} />
+                           <Zap size={20} className="opacity-70" />
                         </div>
                         <div className="flex-grow">
-                           <p className="text-[8px] font-black text-stone-400 uppercase">Your Stay</p>
+                           <p className="text-[8px] font-black text-stone-400 uppercase tracking-widest">Your Stay</p>
                            <p className="text-base font-bold text-stone-900 leading-tight">{selectedForCard.property}</p>
                            <p className="text-[10px] font-black text-[#B8860B] uppercase">Room #{selectedForCard.roomNo}</p>
-                           {/* ADDRESS ADDED HERE */}
                            <div className="mt-2 pt-2 border-t border-stone-50">
-                              <p className="text-[8px] font-black text-stone-400 uppercase mb-0.5">Drop-off Point</p>
-                              <p className="text-[10px] font-bold text-stone-800 leading-tight">
-                                 {getLocationInfo(selectedForCard.property).name}<br/>
-                                 {getLocationInfo(selectedForCard.property).address}
+                              <p className="text-[8px] font-black text-stone-400 uppercase mb-0.5">Location</p>
+                              <p className="text-[10px] font-bold text-stone-800 leading-tight italic">
+                                 {getLocationInfo(selectedForCard.property).name}
                               </p>
                            </div>
                         </div>
                      </div>
-                     <div className="bg-white p-6 rounded-3xl border border-stone-100 flex items-center gap-5">
+                     <div className="bg-white/80 p-6 rounded-3xl border border-stone-100 flex items-center gap-5">
                         <div className="w-12 h-12 bg-[#FEF9E7] rounded-2xl flex items-center justify-center text-[#B8860B]">
-                           <Sun size={20} />
+                           <Sun size={20} className="opacity-70" />
                         </div>
                         <div>
-                           <p className="text-[8px] font-black text-stone-400 uppercase">The Date</p>
+                           <p className="text-[8px] font-black text-stone-400 uppercase tracking-widest">The Date</p>
                            <p className="text-base font-bold text-stone-900">April 17-18, 2026</p>
-                           <p className="text-[10px] font-black text-[#B8860B] uppercase">Arossim, Goa</p>
+                           <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-widest">Arossim, Goa</p>
                         </div>
                      </div>
+                  </div>
+
+                  {/* Sign-off Section */}
+                  <div className="pt-8 space-y-1">
+                     <p className="text-[11px] text-stone-400 italic font-serif">With Love,</p>
+                     <p className="text-xl font-serif font-bold text-stone-800">The Srivastava Family</p>
                   </div>
                </div>
             </div>

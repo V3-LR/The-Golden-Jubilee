@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useTransition, useDeferredValue } from 'react';
 import { Guest, AppTab, Budget, UserRole } from './types';
 import { INITIAL_GUESTS, INITIAL_BUDGET, EVENT_CONFIG } from './constants';
 import Sidebar from './components/Sidebar';
@@ -11,12 +11,12 @@ import RoomMap from './components/RoomMap';
 import Login from './components/Login';
 import RSVPManager from './components/RSVPManager';
 import GuestPortal from './components/GuestPortal';
-import { Menu, ShieldCheck, Lock, UserPlus, EyeOff, CheckCircle, RefreshCw } from 'lucide-react';
+import { Menu, ShieldCheck, UserPlus, EyeOff, CheckCircle, RefreshCw } from 'lucide-react';
 
 /**
  * PERSISTENCE ARCHITECTURE V2
  * We use a stable key for all future versions.
- * If data is missing, we "scavenge" older keys to ensure no data is lost during transitions.
+ * If data is missing, we "scavenge" older keys.
  */
 const STABLE_KEY = 'ESTATE_PLANNER_STABLE_V1';
 const PREVIOUS_KEYS = [
@@ -29,10 +29,10 @@ const SESSION_KEY = 'ESTATE_PLANNER_SESSION_STABLE';
 const App: React.FC = () => {
   const [saveIndicator, setSaveIndicator] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   // 1. DATA INITIALIZATION & MIGRATION ENGINE
   const [guests, setGuests] = useState<Guest[]>(() => {
-    // Try stable key first
     const saved = localStorage.getItem(STABLE_KEY);
     if (saved) {
       try {
@@ -41,14 +41,12 @@ const App: React.FC = () => {
       } catch (e) { console.error("Stable Load Error", e); }
     }
 
-    // Migration Scavenger: Look for data in older keys if stable is empty
     for (const oldKey of PREVIOUS_KEYS) {
       const oldData = localStorage.getItem(oldKey);
       if (oldData) {
         try {
           const parsed = JSON.parse(oldData);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            console.log(`Migrating data from ${oldKey} to Stable Store`);
             localStorage.setItem(STABLE_KEY, oldData);
             return parsed;
           }
@@ -58,6 +56,9 @@ const App: React.FC = () => {
 
     return INITIAL_GUESTS;
   });
+
+  // Use deferred value for heavy rendering components to improve INP
+  const deferredGuests = useDeferredValue(guests);
 
   const [userRole, setUserRole] = useState<UserRole>(() => {
     const saved = localStorage.getItem(SESSION_KEY);
@@ -105,17 +106,23 @@ const App: React.FC = () => {
   // 3. MASTER UPDATE HANDLER (REPLICATION ENGINE)
   const handleUpdateGuest = useCallback((id: string, updates: Partial<Guest>) => {
     setIsSyncing(true);
-    // Functional update ensures we're working with the freshest state batch
     setGuests((prev) => 
       prev.map((guest) => (guest.id === id ? { ...guest, ...updates } : guest))
     );
-    // Visual feedback for auto-sync
     setTimeout(() => setIsSyncing(false), 200);
+  }, []);
+
+  // Optimized Tab Switcher to prevent INP blocking
+  const handleTabChange = useCallback((tab: AppTab) => {
+    setIsSidebarOpen(false); // Immediate UI response
+    startTransition(() => {
+      setActiveTab(tab); // Concurrent background render
+    });
   }, []);
 
   const handleTeleport = (guestId: string) => {
     setActiveGuestId(guestId);
-    setActiveTab('portal');
+    handleTabChange('portal');
   };
 
   const handleLogout = () => {
@@ -156,15 +163,15 @@ const App: React.FC = () => {
       setUserRole(role);
       if (guestId) {
         setActiveGuestId(guestId);
-        setActiveTab('portal');
+        handleTabChange('portal');
       } else {
-        setActiveTab('master');
+        handleTabChange('master');
       }
     }} />;
   }
 
   const renderContent = () => {
-    const currentGuest = guests.find(g => g.id === activeGuestId) || guests[0]; 
+    const currentGuest = deferredGuests.find(g => g.id === activeGuestId) || deferredGuests[0]; 
 
     if (activeTab === 'portal') {
       return (
@@ -181,7 +188,7 @@ const App: React.FC = () => {
                 </div>
               </div>
               <button 
-                onClick={() => setActiveTab('master')}
+                onClick={() => handleTabChange('master')}
                 className="w-full sm:w-auto bg-[#D4AF37] text-stone-900 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white transition-all shadow-lg"
               >
                 <EyeOff size={16} /> Close Preview
@@ -215,7 +222,7 @@ const App: React.FC = () => {
             )}
           </div>
           <DataTable 
-            guests={guests} 
+            guests={deferredGuests} 
             onUpdate={handleUpdateGuest}
             columns={[
               { key: 'name', label: 'HONORED NAME', editable: userRole === 'planner' },
@@ -230,13 +237,13 @@ const App: React.FC = () => {
       );
     }
 
-    if (activeTab === 'rsvp-manager') return <RSVPManager guests={guests} onUpdate={handleUpdateGuest} role={userRole} onTeleport={handleTeleport} />;
+    if (activeTab === 'rsvp-manager') return <RSVPManager guests={deferredGuests} onUpdate={handleUpdateGuest} role={userRole} onTeleport={handleTeleport} />;
     if (activeTab === 'venue') return <VenueOverview />;
-    if (activeTab === 'rooms') return <RoomMap guests={guests} />;
+    if (activeTab === 'rooms') return <RoomMap guests={deferredGuests} />;
     if (activeTab === 'meals') return (
       <div className="space-y-6">
         <h2 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 px-1">Culinary Log</h2>
-        <DataTable guests={guests} onUpdate={handleUpdateGuest} columns={[
+        <DataTable guests={deferredGuests} onUpdate={handleUpdateGuest} columns={[
           { key: 'name', label: 'Guest Name' },
           { key: 'dietaryNote', label: 'Dietary Preference', editable: userRole === 'planner' },
           { key: 'roomNo', label: 'Room' },
@@ -244,9 +251,9 @@ const App: React.FC = () => {
         ]} />
       </div>
     );
-    if (activeTab === 'tree') return <TreeView guests={guests} />;
-    if (activeTab === 'budget') return <BudgetTracker budget={budget} onUpdateBudget={(u) => setBudget(p => ({...p, ...u}))} guests={guests} isPlanner={userRole === 'planner'} />;
-    if (activeTab === 'ai') return <AIPlanner guests={guests} />;
+    if (activeTab === 'tree') return <TreeView guests={deferredGuests} />;
+    if (activeTab === 'budget') return <BudgetTracker budget={budget} onUpdateBudget={(u) => setBudget(p => ({...p, ...u}))} guests={deferredGuests} isPlanner={userRole === 'planner'} />;
+    if (activeTab === 'ai') return <AIPlanner guests={deferredGuests} />;
 
     return <div className="p-20 text-center font-serif text-stone-400">Loading Estate Data...</div>;
   };
@@ -255,10 +262,15 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-[#FCFAF2] flex flex-col lg:flex-row`}>
+      {/* Golden Transition Progress Indicator */}
+      {isPending && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent z-[200] animate-pulse pointer-events-none"></div>
+      )}
+
       {!isStrictGuest && (
         <Sidebar 
           activeTab={activeTab} 
-          setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }} 
+          setActiveTab={handleTabChange} 
           role={userRole} 
           onLogout={handleLogout} 
           isOpen={isSidebarOpen}
@@ -298,7 +310,7 @@ const App: React.FC = () => {
           </header>
         )}
 
-        <div className={`${isStrictGuest ? 'w-full' : 'max-w-7xl mx-auto px-4 md:px-10 py-10'}`}>
+        <div className={`${isStrictGuest ? 'w-full' : 'max-w-7xl mx-auto px-4 md:px-10 py-10'} ${isPending ? 'opacity-70 grayscale-[0.3] pointer-events-none transition-all duration-300' : 'transition-all duration-300'}`}>
           {renderContent()}
         </div>
       </main>

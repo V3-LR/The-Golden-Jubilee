@@ -132,7 +132,7 @@ export const ROOM_DATABASE: RoomDetail[] = [
     property: "Villa-Pool",
     title: "Heritage Master Suite",
     description: "Grand suite with a private veranda overlooking the pool area at Lilia.",
-    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1628592102751-ba83b03bc42e?auto=format&fit=crop&q=80",
     type: "Master",
     amenities: ["AC", "En-suite Bath", "Pool Access", "Mini Bar"]
   },
@@ -141,7 +141,7 @@ export const ROOM_DATABASE: RoomDetail[] = [
     property: "Villa-Pool",
     title: "Teak Wood Twin",
     description: "Traditional Goan decor with twin beds and garden views at Lilia.",
-    image: "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80",
     type: "Twin",
     amenities: ["AC", "Garden View", "WiFi"]
   },
