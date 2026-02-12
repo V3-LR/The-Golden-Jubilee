@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Guest, RoomDetail, EventFunction } from '../types';
 import { PROPERTY_LOCATIONS } from '../constants';
@@ -12,8 +13,8 @@ interface GuestPortalProps {
   roomDatabase: RoomDetail[];
   itinerary: EventFunction[];
   onUpdate: (id: string, updates: Partial<Guest>) => void;
-  onUpdateEventImage: (eventId: string, base64: string) => void;
-  onUpdateRoomImage: (roomNo: string, property: string, base64: string) => void;
+  onUpdateEventImage: (eventId: string, file: File) => void;
+  onUpdateRoomImage: (roomNo: string, property: string, file: File) => void;
   isPlanner: boolean;
   onBackToMaster?: () => void;
 }
@@ -36,13 +37,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guest, onUpdate, roomDatabase
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && uploadTarget) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (uploadTarget.type === 'event') onUpdateEventImage(uploadTarget.id, reader.result as string);
-        if (uploadTarget.type === 'room' && room) onUpdateRoomImage(room.roomNo, room.property, reader.result as string);
-        setUploadTarget(null);
-      };
-      reader.readAsDataURL(file);
+      if (uploadTarget.type === 'event') onUpdateEventImage(uploadTarget.id, file);
+      if (uploadTarget.type === 'room' && room) onUpdateRoomImage(room.roomNo, room.property, file);
+      setUploadTarget(null);
     }
   };
 

@@ -1,7 +1,8 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Guest, Budget } from '../types';
 import { MEAL_CONFIG } from '../constants';
-import { Utensils, Coffee, Sun, Moon, Beer, GlassWater, Wine } from 'lucide-react';
+import { Utensils, Coffee, Sun, Moon, Beer, GlassWater, Wine, User, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface MealPlanProps {
   guests: Guest[];
@@ -11,7 +12,9 @@ interface MealPlanProps {
 }
 
 const MealPlan: React.FC<MealPlanProps> = ({ guests, budget, onUpdate, isPlanner }) => {
+  const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const confirmedGuests = guests.filter(g => g.status === 'Confirmed');
+  
   const breakdown = budget.cateringBreakdown || {
     lunch17: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 },
     dinner17: { adultVeg: 0, adultNonVeg: 0, kidVeg: 0, kidNonVeg: 0 },
@@ -28,11 +31,18 @@ const MealPlan: React.FC<MealPlanProps> = ({ guests, budget, onUpdate, isPlanner
 
   const bar = budget.barInventory || { urakLitres: 0, beerCases: 0, mixersCrates: 0 };
 
+  const getGuestsForMeal = (mealKey: string) => {
+    return confirmedGuests.filter(g => {
+      const pref = g.mealPlan[mealKey as keyof typeof g.mealPlan];
+      return pref === 'Veg' || pref === 'Non-Veg';
+    });
+  };
+
   return (
     <div className="space-y-16 pb-32 animate-in fade-in duration-700">
       <div className="px-1">
         <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight tracking-tight">Catering <br/><span className="text-[#B8860B]">Manifest</span></h2>
-        <p className="text-stone-500 text-lg italic mt-3">Production totals for {confirmedGuests.length} confirmed guests.</p>
+        <p className="text-stone-500 text-lg italic mt-3">Replicating data for {confirmedGuests.length} confirmed guests from Master List.</p>
       </div>
 
       {/* Bar Inventory Section */}
@@ -62,11 +72,12 @@ const MealPlan: React.FC<MealPlanProps> = ({ guests, budget, onUpdate, isPlanner
       </section>
 
       {/* Meal Production Totals */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 gap-8">
         {(Object.keys(mealLabels) as Array<keyof typeof mealLabels>).map((mealKey) => {
           const config = mealLabels[mealKey];
-          const stats = breakdown[mealKey];
           const Icon = config.icon;
+          const mealGuests = getGuestsForMeal(mealKey);
+          const isExpanded = expandedMeal === mealKey;
 
           return (
             <div key={mealKey} className="bg-white p-8 rounded-[3.5rem] border border-stone-100 shadow-xl space-y-6 relative overflow-hidden group hover:border-[#D4AF37]/30 transition-all">
@@ -80,24 +91,50 @@ const MealPlan: React.FC<MealPlanProps> = ({ guests, budget, onUpdate, isPlanner
                     <p className="text-[9px] font-black uppercase text-stone-400 tracking-widest">{config.date}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                   <p className="text-[9px] font-black uppercase text-stone-400 mb-1">Total Plates</p>
-                   <p className="text-xl font-bold text-stone-900">{stats.adultVeg + stats.kidVeg + stats.adultNonVeg + stats.kidNonVeg}</p>
+                <div className="flex items-center gap-6">
+                  <div className="text-right">
+                     <p className="text-[9px] font-black uppercase text-stone-400 mb-1">Total Plates</p>
+                     <p className="text-xl font-bold text-stone-900">{mealGuests.length}</p>
+                  </div>
+                  <button 
+                    onClick={() => setExpandedMeal(isExpanded ? null : mealKey)}
+                    className="p-3 bg-stone-50 rounded-full text-stone-400 hover:text-stone-900 transition-colors"
+                  >
+                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-green-50/50 p-6 rounded-[2.5rem] border border-green-100/50 text-center">
-                  <p className="text-[10px] font-black uppercase text-green-700 mb-2">Pure Veg</p>
-                  <p className="text-3xl font-serif font-bold text-stone-900">{stats.adultVeg + stats.kidVeg}</p>
-                  <p className="text-[8px] text-stone-400 mt-1 uppercase font-bold">{stats.adultVeg} Adult + {stats.kidVeg} Kid</p>
+                  <p className="text-[10px] font-black uppercase text-green-700 mb-2">Veg Plates</p>
+                  <p className="text-3xl font-serif font-bold text-stone-900">
+                    {mealGuests.filter(g => g.mealPlan[mealKey as keyof typeof g.mealPlan] === 'Veg').length}
+                  </p>
                 </div>
-                <div className="bg-red-50/30 p-6 rounded-[2.5rem] border border-red-50 text-center">
-                  <p className="text-[10px] font-black uppercase text-red-700 mb-2">Non-Veg</p>
-                  <p className="text-3xl font-serif font-bold text-stone-900">{stats.adultNonVeg + stats.kidNonVeg}</p>
-                  <p className="text-[8px] text-red-400 mt-1 uppercase font-bold">{stats.adultNonVeg} Adult + {stats.kidNonVeg} Kid</p>
+                <div className="bg-red-50/50 p-6 rounded-[2.5rem] border border-red-100/50 text-center">
+                  <p className="text-[10px] font-black uppercase text-red-700 mb-2">Non-Veg Plates</p>
+                  <p className="text-3xl font-serif font-bold text-stone-900">
+                    {mealGuests.filter(g => g.mealPlan[mealKey as keyof typeof g.mealPlan] === 'Non-Veg').length}
+                  </p>
                 </div>
               </div>
+
+              {isExpanded && (
+                <div className="pt-8 space-y-4 animate-in slide-in-from-top-4 duration-300">
+                   <h4 className="text-[10px] font-black uppercase tracking-widest text-stone-400">Guest Breakdown</h4>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {mealGuests.map(g => (
+                         <div key={g.id} className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100">
+                            <span className="text-xs font-bold text-stone-900">{g.name}</span>
+                            <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${g.mealPlan[mealKey as keyof typeof g.mealPlan] === 'Veg' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                               {g.mealPlan[mealKey as keyof typeof g.mealPlan]}
+                            </span>
+                         </div>
+                      ))}
+                   </div>
+                </div>
+              )}
             </div>
           );
         })}
