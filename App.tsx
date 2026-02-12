@@ -16,6 +16,7 @@ import MealPlan from './components/MealPlan';
 import TaskMatrix from './components/TaskMatrix';
 import InventoryManager from './components/InventoryManager';
 import { Menu, UserPlus, CheckCircle, RefreshCw, Database, Save, LifeBuoy, ShieldAlert } from 'lucide-react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // STABLE STORAGE KEYS
 const STORAGE_PREFIX = 'SRIVASTAVA_GOLDEN_JUBILEE_';
@@ -265,6 +266,7 @@ const App: React.FC = () => {
         )}
         <div className={`${session.role === 'guest' ? 'w-full' : 'max-w-7xl mx-auto px-4 md:px-10 py-10'}`}>{renderContent()}</div>
       </main>
+      <SpeedInsights />
     </div>
   );
 };
