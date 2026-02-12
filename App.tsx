@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useEffect, useDeferredValue } from 'react';
-import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task } from './types';
+import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task, PropertyType } from './types';
 import { INITIAL_GUESTS, INITIAL_BUDGET, EVENT_CONFIG, ITINERARY as STATIC_ITINERARY, ROOM_DATABASE as STATIC_ROOMS, VILLA_TASKS } from './constants';
 import Sidebar from './components/Sidebar';
 import DataTable from './components/DataTable';
@@ -15,11 +15,11 @@ import GuestPortal from './components/GuestPortal';
 import MealPlan from './components/MealPlan';
 import TaskMatrix from './components/TaskMatrix';
 import InventoryManager from './components/InventoryManager';
-import { Menu, UserPlus, CheckCircle, RefreshCw, Database, Save, LifeBuoy, ShieldAlert } from 'lucide-react';
+import { Menu, UserPlus, CheckCircle, RefreshCw, Database, Save, LifeBuoy, ShieldAlert, Trash2 } from 'lucide-react';
 
 // STABLE STORAGE KEYS
 const STORAGE_PREFIX = 'SRIVASTAVA_GOLDEN_JUBILEE_';
-const MASTER_KEY = STORAGE_PREFIX + 'STABLE_V6';
+const MASTER_KEY = STORAGE_PREFIX + 'STABLE_V7';
 
 interface AppState {
   guests: Guest[];
@@ -29,6 +29,26 @@ interface AppState {
   tasks: Task[];
   session: { role: UserRole; guestId: string | null; lastTab: string };
 }
+
+// Utility to compress images to avoid localStorage 5MB limit
+const compressImage = (base64Str: string, maxWidth = 800): Promise<string> => {
+  return new Promise((resolve) => {
+    if (!base64Str.startsWith('data:image')) return resolve(base64Str);
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const scale = maxWidth / img.width;
+      if (scale >= 1) return resolve(base64Str);
+      canvas.width = maxWidth;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.6));
+    };
+    img.onerror = () => resolve(base64Str);
+  });
+};
 
 const App: React.FC = () => {
   const [lastSynced, setLastSynced] = useState<Date>(new Date());
@@ -106,7 +126,15 @@ const App: React.FC = () => {
       setHasUnsavedChanges(false);
     } catch (e: any) {
       if (e.name === 'QuotaExceededError') {
-        alert("CRITICAL: Browser Storage Full. Try 'Purge Photos' to save guest list names.");
+        alert("CRITICAL: Storage Full. Photos are too large. Deleting some photos to save your guest names...");
+        // Auto-purge photos if we can't save
+        const cleanState = {
+          ...stateToSave,
+          rooms: stateToSave.rooms.map(r => ({ ...r, image: STATIC_ROOMS.find(sr => sr.roomNo === r.roomNo)?.image || '' })),
+          itinerary: STATIC_ITINERARY
+        };
+        localStorage.setItem(MASTER_KEY, JSON.stringify(cleanState));
+        setAppState(cleanState);
       }
     } finally {
       setTimeout(() => setIsSyncing(false), 800);
@@ -120,12 +148,19 @@ const App: React.FC = () => {
     }
   }, [appState, hasUnsavedChanges, performSync]);
 
-  // FIXED TS2698: Avoid spreading Partial types directly if TS complains
+  // FIX TS2698: Use explicit merging and typing
   const broadcastUpdate = useCallback((updatesOrFn: Partial<AppState> | ((prev: AppState) => Partial<AppState>)) => {
     setAppState((prev: AppState) => {
       const updates = typeof updatesOrFn === 'function' ? updatesOrFn(prev) : updatesOrFn;
-      // Use Object.assign for a safer merge of partial state objects
-      const newState = Object.assign({}, prev, updates);
+      // Explicitly merging properties to avoid TS spread errors on Partial types
+      const newState: AppState = {
+        guests: updates.guests !== undefined ? updates.guests : prev.guests,
+        rooms: updates.rooms !== undefined ? updates.rooms : prev.rooms,
+        itinerary: updates.itinerary !== undefined ? updates.itinerary : prev.itinerary,
+        budget: updates.budget !== undefined ? updates.budget : prev.budget,
+        tasks: updates.tasks !== undefined ? updates.tasks : prev.tasks,
+        session: updates.session !== undefined ? updates.session : prev.session
+      };
       setHasUnsavedChanges(true);
       return newState;
     });
@@ -139,8 +174,22 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const handleUpdateRoomImage = async (roomNo: string, property: string, base64: string) => {
+    const compressed = await compressImage(base64);
+    broadcastUpdate(prev => ({
+      rooms: prev.rooms.map(r => r.roomNo === roomNo && r.property === property ? { ...r, image: compressed } : r)
+    }));
+  };
+
+  const handleUpdateEventImage = async (id: string, base64: string) => {
+    const compressed = await compressImage(base64);
+    broadcastUpdate(prev => ({
+      itinerary: prev.itinerary.map(e => e.id === id ? { ...e, image: compressed } : e)
+    }));
+  };
+
   const purgePhotos = () => {
-    if (confirm("Reset all photos to default to save space? Names will be kept.")) {
+    if (confirm("Reset all custom photos? This keeps guest names but clears storage space.")) {
       broadcastUpdate({ itinerary: STATIC_ITINERARY, rooms: STATIC_ROOMS });
     }
   };
@@ -166,12 +215,12 @@ const App: React.FC = () => {
     }
   }, []);
 
-  if (!session.role) return <Login onLogin={(r, id) => broadcastUpdate({ session: { ...session, role: r, guestId: id || null, lastTab: id ? 'portal' : 'master' } })} />;
+  if (!session.role) return <Login onLogin={(r, id) => broadcastUpdate({ session: { role: r, guestId: id || null, lastTab: id ? 'portal' : 'master' } })} />;
 
   const renderContent = () => {
     const currentGuest = deferredGuests.find((g: Guest) => g.id === session.guestId) || (session.role === 'planner' ? deferredGuests[0] : null);
     
-    if (session.role === 'guest' && !currentGuest) return <Login onLogin={(r, id) => broadcastUpdate({ session: { ...session, role: r, guestId: id || null, lastTab: 'portal' } })} />;
+    if (session.role === 'guest' && !currentGuest) return <Login onLogin={(r, id) => broadcastUpdate({ session: { role: r, guestId: id || null, lastTab: 'portal' } })} />;
 
     if (session.lastTab === 'portal') return (
       <GuestPortal 
@@ -180,8 +229,8 @@ const App: React.FC = () => {
         roomDatabase={rooms} 
         itinerary={itinerary} 
         isPlanner={isPlanner} 
-        onUpdateEventImage={(id, img) => broadcastUpdate(prev => ({ itinerary: prev.itinerary.map(e => e.id === id ? { ...e, image: img } : e) }))} 
-        onUpdateRoomImage={(roomNo, property, img) => broadcastUpdate(prev => ({ rooms: prev.rooms.map(r => r.roomNo === roomNo && r.property === property ? { ...r, image: img } : r) }))}
+        onUpdateEventImage={handleUpdateEventImage} 
+        onUpdateRoomImage={handleUpdateRoomImage}
         onBackToMaster={() => broadcastUpdate({ session: { ...session, guestId: null, lastTab: 'master' } })} 
       />
     );
@@ -191,7 +240,7 @@ const App: React.FC = () => {
         return (
           <div className="space-y-10">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
-              <div><h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight tracking-tight">Master List</h2><p className="text-stone-500 italic mt-2">Update a name here to sync across all logistics.</p></div>
+              <div><h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight tracking-tight">Master List</h2><p className="text-stone-500 italic mt-2 text-sm">Update a name here to sync across Rooms, Meals, and Invites.</p></div>
               {isPlanner && (
                 <div className="flex flex-wrap gap-4">
                   <button onClick={handleRescueButton} className="bg-amber-50 text-amber-700 px-6 py-5 rounded-full text-[10px] font-black uppercase tracking-widest border-2 border-amber-200 flex items-center gap-2 hover:bg-amber-100 transition-all"><LifeBuoy size={18} /> Rescue Data</button>
@@ -201,7 +250,7 @@ const App: React.FC = () => {
             </div>
             {storageUsage > 70 && (
               <div className="bg-red-50 text-red-600 p-6 rounded-[2rem] border-2 border-red-200 flex items-center justify-between">
-                <div className="flex items-center gap-4"><ShieldAlert size={24} /><p className="font-black uppercase tracking-widest text-xs">Storage Warning: Browser quota nearly full ({storageUsage}%).</p></div>
+                <div className="flex items-center gap-4"><ShieldAlert size={24} /><p className="font-black uppercase tracking-widest text-xs">Storage High ({storageUsage}%). Purge photos to keep names safe.</p></div>
                 <button onClick={purgePhotos} className="bg-red-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase">Purge Photos</button>
               </div>
             )}
@@ -212,8 +261,8 @@ const App: React.FC = () => {
           </div>
         );
       case 'rsvp-manager': return <RSVPManager guests={deferredGuests} onUpdate={handleUpdateGuest} role={session.role} onTeleport={(id) => broadcastUpdate({ session: { ...session, guestId: id, lastTab: 'portal' } })} />;
-      case 'venue': return <VenueOverview onUpdateRoomImage={(no, prop, img) => broadcastUpdate(prev => ({ rooms: prev.rooms.map(r => r.roomNo === no && r.property === prop ? { ...r, image: img } : r) }))} rooms={rooms} isPlanner={isPlanner} />;
-      case 'rooms': return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={(no, prop, img) => broadcastUpdate(prev => ({ rooms: prev.rooms.map(r => r.roomNo === no && r.property === prop ? { ...r, image: img } : r) }))} onAddRoom={(r) => broadcastUpdate(p => ({ rooms: [...p.rooms, r] }))} onUpdateRoom={(no, prop, updates) => broadcastUpdate(p => ({ rooms: p.rooms.map(r => r.roomNo === no && r.property === prop ? { ...r, ...updates } : r) }))} onDeleteRoom={(no, prop) => broadcastUpdate(p => ({ rooms: p.rooms.filter(r => !(r.roomNo === no && r.property === prop)) }))} isPlanner={isPlanner} />;
+      case 'venue': return <VenueOverview onUpdateRoomImage={handleUpdateRoomImage} rooms={rooms} isPlanner={isPlanner} />;
+      case 'rooms': return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={handleUpdateRoomImage} onAddRoom={(r) => broadcastUpdate(p => ({ rooms: [...p.rooms, r] }))} onUpdateRoom={(no, prop, updates) => broadcastUpdate(p => ({ rooms: p.rooms.map(r => r.roomNo === no && r.property === prop ? { ...r, ...updates } : r) }))} onDeleteRoom={(no, prop) => broadcastUpdate(p => ({ rooms: p.rooms.filter(r => !(r.roomNo === no && r.property === prop)) }))} isPlanner={isPlanner} />;
       case 'meals': return <MealPlan guests={deferredGuests} budget={budget} onUpdate={handleUpdateGuest} isPlanner={isPlanner} />;
       case 'tasks': return <TaskMatrix tasks={tasks} onUpdateTasks={(t) => broadcastUpdate({ tasks: t })} isPlanner={isPlanner} />;
       case 'tree': return <TreeView guests={deferredGuests} />;
