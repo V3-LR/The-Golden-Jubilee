@@ -1,3 +1,4 @@
+
 {
   "compilerOptions": {
     "target": "ESNext",
@@ -16,18 +17,6 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": [
-    "./*.ts", 
-    "./*.tsx", 
-    "components/**/*.ts", 
-    "components/**/*.tsx", 
-    "services/**/*.ts", 
-    "services/**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules", 
-    "api", 
-    "app/api", 
-    "dist"
-  ]
+  "include": ["./**/*.ts", "./**/*.tsx"],
+  "exclude": ["node_modules", "api", "dist"]
 }

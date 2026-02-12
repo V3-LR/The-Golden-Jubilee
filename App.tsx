@@ -105,8 +105,8 @@ const App: React.FC = () => {
   const handleCloudImageUpload = async (type: 'room' | 'event', id: string, file: File, extraId?: string) => {
     setIsSyncing(true);
     try {
-      // Direct hit to /api/avatar/upload (Root Level)
-      const response = await fetch(`/api/avatar/upload?filename=${file.name}`, {
+      // Direct hit to the new standard /api/upload endpoint
+      const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
         method: 'POST',
         body: file,
       });
@@ -125,7 +125,7 @@ const App: React.FC = () => {
         broadcastUpdate({ itinerary: itinerary.map(e => e.id === id ? { ...e, image: imageUrl } : e) });
       }
     } catch (e) {
-      alert("Cloud Upload Failed. Saving to phone temporary memory instead.");
+      alert("Cloud Upload Failed. Image saved locally for now.");
     } finally {
       setIsSyncing(false);
     }
@@ -159,9 +159,9 @@ const App: React.FC = () => {
                 <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master Database</h2>
                 <div className="flex items-center gap-3 mt-4">
                   <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${isCloudConnected ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-stone-900 text-[#D4AF37]'}`}>
-                    <Database size={12} /> {isCloudConnected ? 'Vercel KV Connected' : 'Syncing to Cloud...'}
+                    <Database size={12} /> {isCloudConnected ? 'Vercel Blob Active' : 'Syncing to Cloud...'}
                   </span>
-                  <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest italic">Changes here replicate instantly to all family views.</p>
+                  <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest italic">Names update instantly across Room List, Meal Plan & RSVP Hub.</p>
                 </div>
               </div>
               {isPlanner && (
@@ -198,7 +198,7 @@ const App: React.FC = () => {
             <div className="hidden md:block cursor-pointer" onClick={() => broadcastUpdate({ session: { ...session, lastTab: 'master', guestId: null } })}>
               <div className="flex items-center gap-3">
                  <Wifi size={14} className={isSyncing ? "text-amber-500 animate-pulse" : "text-green-500"} />
-                 <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Family Interactive Hub v2.5</p>
+                 <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Family Replicated Hub v2.5</p>
               </div>
               <h1 className="text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h1>
             </div>
@@ -206,14 +206,14 @@ const App: React.FC = () => {
               {isSyncing ? (
                 <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-pulse shadow-xl border border-[#D4AF37]/30">
                   <RefreshCw size={16} className="animate-spin text-[#D4AF37]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Replicating Changes...</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Replicating Names...</span>
                 </div>
               ) : (
                 <button onClick={() => syncToVercel(appState)} className={`flex items-center gap-3 px-6 py-3 rounded-full border transition-all ${hasUnsavedChanges ? 'bg-amber-50 border-amber-200 text-amber-600 shadow-lg scale-105' : 'bg-white border-stone-100 text-stone-400 opacity-60 hover:opacity-100'}`}>
                   {hasUnsavedChanges ? <Save size={16} className="animate-bounce" /> : <CheckCircle size={16} className="text-green-500" />}
                   <div className="flex flex-col items-start text-left">
-                    <span className="text-[8px] font-black uppercase tracking-widest">{hasUnsavedChanges ? 'Update Cloud' : 'Global Replicated'}</span>
-                    <span className="text-[7px] font-bold uppercase">Last Sync: {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest">{hasUnsavedChanges ? 'Sync to Cloud' : 'Names Replicated'}</span>
+                    <span className="text-[7px] font-bold uppercase">Sync: {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </button>
               )}
