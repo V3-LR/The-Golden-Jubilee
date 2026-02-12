@@ -1,6 +1,5 @@
-
 import React, { useState, useCallback, useEffect, useDeferredValue } from 'react';
-import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task, PropertyType } from './types';
+import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task } from './types';
 import { INITIAL_GUESTS, INITIAL_BUDGET, EVENT_CONFIG, ITINERARY as STATIC_ITINERARY, ROOM_DATABASE as STATIC_ROOMS, VILLA_TASKS } from './constants';
 import Sidebar from './components/Sidebar';
 import DataTable from './components/DataTable';
@@ -15,14 +14,11 @@ import GuestPortal from './components/GuestPortal';
 import MealPlan from './components/MealPlan';
 import TaskMatrix from './components/TaskMatrix';
 import InventoryManager from './components/InventoryManager';
-import { Menu, UserPlus, CheckCircle, RefreshCw, Database, Save, LifeBuoy, ShieldAlert, Trash2 } from 'lucide-react';
+import DeploymentHub from './components/DeploymentHub';
+import { supabase, uploadToSupabase } from './services/supabase';
+import { Menu, UserPlus, CheckCircle, RefreshCw, Save, Database, Wifi, Share2 } from 'lucide-react';
 
-// Supabase client for persisting planner data
-import { supabase } from './services/supabase';
-
-// STABLE STORAGE KEYS
-const STORAGE_PREFIX = 'SRIVASTAVA_GOLDEN_JUBILEE_';
-const MASTER_KEY = STORAGE_PREFIX + 'STABLE_V7';
+const LOCAL_STORAGE_KEY = 'SRIVASTAVA_JUBILEE_V25_LOCAL';
 
 interface AppState {
   guests: Guest[];
@@ -30,148 +26,116 @@ interface AppState {
   itinerary: EventFunction[];
   budget: Budget;
   tasks: Task[];
-  session: { role: UserRole; guestId: string | null; lastTab: string };
 }
 
-// Utility to compress images to avoid localStorage 5MB limit
-const compressImage = (base64Str: string, maxWidth = 800): Promise<string> => {
-  return new Promise((resolve) => {
-    if (!base64Str.startsWith('data:image')) return resolve(base64Str);
-    const img = new Image();
-    img.src = base64Str;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const scale = maxWidth / img.width;
-      if (scale >= 1) return resolve(base64Str);
-      canvas.width = maxWidth;
-      canvas.height = img.height * scale;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.6));
-    };
-    img.onerror = () => resolve(base64Str);
-  });
-};
-
 const App: React.FC = () => {
-  const [lastSynced, setLastSynced] = useState<Date>(new Date());
+  const [session, setSession] = useState<{ role: UserRole; guestId: string | null; lastTab: string }>({
+    role: null,
+    guestId: null,
+    lastTab: 'master'
+  });
+  
+  const [appState, setAppState] = useState<AppState>(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.guests?.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return {
+      guests: INITIAL_GUESTS,
+      rooms: STATIC_ROOMS,
+      itinerary: STATIC_ITINERARY,
+      budget: INITIAL_BUDGET,
+      tasks: [],
+    };
+  });
+
+  const [planId, setPlanId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showRescueSuccess, setShowRescueSuccess] = useState(false);
-  const [storageUsage, setStorageUsage] = useState<number>(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  // Track the current plan (event) id stored in Supabase.  When absent, a new event will be created.
-  const [planId, setPlanId] = useState<string | null>(null);
+  const [lastSynced, setLastSynced] = useState<Date>(new Date());
 
-  // 1. DATA RECOVERY ENGINE
-  // Deep scan rescue is disabled in Supabase mode.  It returns null because there is no localStorage-based history to rescue.
-  const runDeepScanRescue = useCallback(() => {
-    return null;
-  }, []);
-
-  // Initialize the state with sensible defaults.  Once planId is resolved, this will be overwritten by data from Supabase.
-  const [appState, setAppState] = useState<AppState>(() => ({
-    guests: INITIAL_GUESTS,
-    rooms: STATIC_ROOMS,
-    itinerary: STATIC_ITINERARY,
-    budget: INITIAL_BUDGET,
-    tasks: [],
-    session: { role: null, guestId: null, lastTab: 'master' }
-  }));
-
-  const { guests, rooms, itinerary, budget, tasks, session } = appState;
+  const { guests, rooms, itinerary, budget, tasks } = appState;
   const deferredGuests = useDeferredValue(guests);
   const isPlanner = session.role === 'planner';
 
-  /**
-   * When the component mounts, resolve the event (plan) identifier from the URL.  If none is present,
-   * create a new plan record in Supabase with the current default state.  The new plan id is then written
-   * back into the URL query string.  This effect only runs once on initial render.
-   */
+  // Initialize from URL Plan ID
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('plan');
     if (id) {
       setPlanId(id);
-    } else {
-      (async () => {
-        const { data, error } = await supabase
-          .from('plans')
-          .insert({ data: appState })
-          .select('id')
-          .single();
-        if (!error && data?.id) {
-          setPlanId(data.id);
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.set('plan', data.id);
-          window.history.replaceState({}, '', newUrl.toString());
-        }
-      })();
+      loadPlanFromSupabase(id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * Once we have a planId, fetch the persisted state from Supabase.  This will overwrite the
-   * default state with whatever has been saved for this event.  If the fetch fails or no data is
-   * available, the app will continue to use the default state.
-   */
-  useEffect(() => {
-    if (!planId) return;
-    (async () => {
+  const loadPlanFromSupabase = async (id: string) => {
+    setIsSyncing(true);
+    try {
       const { data, error } = await supabase
         .from('plans')
         .select('data')
-        .eq('id', planId)
+        .eq('id', id)
         .single();
-      if (!error && data?.data) {
-        setAppState(data.data as AppState);
+      
+      if (data && data.data) {
+        setAppState(data.data);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data.data));
       }
-    })();
+    } catch (e) {
+      console.error("Supabase Load Error:", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const savePlanToSupabase = useCallback(async (state: AppState) => {
+    setIsSyncing(true);
+    try {
+      let currentId = planId;
+      if (!currentId) {
+        const { data, error } = await supabase
+          .from('plans')
+          .insert([{ data: state }])
+          .select()
+          .single();
+        if (data) {
+          currentId = data.id;
+          setPlanId(data.id);
+          const newUrl = `${window.location.pathname}?plan=${data.id}`;
+          window.history.replaceState({}, '', newUrl);
+        }
+      } else {
+        await supabase
+          .from('plans')
+          .update({ data: state })
+          .eq('id', currentId);
+      }
+      
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+      setLastSynced(new Date());
+      setHasUnsavedChanges(false);
+    } catch (e) {
+      console.error("Supabase Save Error:", e);
+    } finally {
+      setIsSyncing(false);
+    }
   }, [planId]);
 
-  useEffect(() => {
-    const total = JSON.stringify(appState).length;
-    setStorageUsage(Math.round((total / (5 * 1024 * 1024)) * 100));
-  }, [appState]);
-
-  const performSync = useCallback(
-    async (stateToSave: AppState) => {
-      if (!planId) return;
-      setIsSyncing(true);
-      const { error } = await supabase
-        .from('plans')
-        .update({ data: stateToSave })
-        .eq('id', planId);
-      if (!error) {
-        setLastSynced(new Date());
-        setHasUnsavedChanges(false);
-      }
-      setTimeout(() => setIsSyncing(false), 800);
-    },
-    [planId]
-  );
-
+  // Auto-sync effect
   useEffect(() => {
     if (hasUnsavedChanges) {
-      const timer = setTimeout(() => performSync(appState), 3000);
+      const timer = setTimeout(() => savePlanToSupabase(appState), 2000);
       return () => clearTimeout(timer);
     }
-  }, [appState, hasUnsavedChanges, performSync]);
+  }, [appState, hasUnsavedChanges, savePlanToSupabase]);
 
-  // FIX TS2698: Use explicit merging and typing
-  const broadcastUpdate = useCallback((updatesOrFn: Partial<AppState> | ((prev: AppState) => Partial<AppState>)) => {
+  const broadcastUpdate = useCallback((updates: Partial<AppState>) => {
     setAppState((prev: AppState) => {
-      const updates = typeof updatesOrFn === 'function' ? updatesOrFn(prev) : updatesOrFn;
-      // Explicitly merging properties to avoid TS spread errors on Partial types
-      const newState: AppState = {
-        guests: updates.guests !== undefined ? updates.guests : prev.guests,
-        rooms: updates.rooms !== undefined ? updates.rooms : prev.rooms,
-        itinerary: updates.itinerary !== undefined ? updates.itinerary : prev.itinerary,
-        budget: updates.budget !== undefined ? updates.budget : prev.budget,
-        tasks: updates.tasks !== undefined ? updates.tasks : prev.tasks,
-        session: updates.session !== undefined ? updates.session : prev.session
-      };
+      const newState: AppState = { ...prev, ...updates };
       setHasUnsavedChanges(true);
       return newState;
     });
@@ -185,53 +149,33 @@ const App: React.FC = () => {
     });
   }, []);
 
-  const handleUpdateRoomImage = async (roomNo: string, property: string, base64: string) => {
-    const compressed = await compressImage(base64);
-    broadcastUpdate(prev => ({
-      rooms: prev.rooms.map(r => r.roomNo === roomNo && r.property === property ? { ...r, image: compressed } : r)
-    }));
-  };
-
-  const handleUpdateEventImage = async (id: string, base64: string) => {
-    const compressed = await compressImage(base64);
-    broadcastUpdate(prev => ({
-      itinerary: prev.itinerary.map(e => e.id === id ? { ...e, image: compressed } : e)
-    }));
-  };
-
-  const purgePhotos = () => {
-    if (confirm("Reset all custom photos? This keeps guest names but clears storage space.")) {
-      broadcastUpdate({ itinerary: STATIC_ITINERARY, rooms: STATIC_ROOMS });
-    }
-  };
-
-  const handleRescueButton = () => {
-    const rescued = runDeepScanRescue();
-    if (rescued) {
-      setAppState(rescued);
-      setShowRescueSuccess(true);
-      setTimeout(() => setShowRescueSuccess(false), 5000);
-    }
-  };
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
-    if (id) {
-      const found = appState.guests.find(g => g.id === id);
-      if (found) {
-        broadcastUpdate({ session: { role: 'guest', guestId: id, lastTab: 'portal' } });
+  const handleCloudImageUpload = async (type: 'room' | 'event', id: string, file: File, extraId?: string) => {
+    setIsSyncing(true);
+    try {
+      const imageUrl = await uploadToSupabase(file, type);
+      
+      if (type === 'room') {
+        broadcastUpdate({ rooms: rooms.map(r => r.roomNo === id && r.property === extraId ? { ...r, image: imageUrl } : r) });
+      } else {
+        broadcastUpdate({ itinerary: itinerary.map(e => e.id === id ? { ...e, image: imageUrl } : e) });
       }
-      window.history.replaceState({}, '', window.location.pathname);
+    } catch (e) {
+      console.error("Supabase Storage Error:", e);
+      alert("Image upload failed. Please ensure the 'images' bucket exists in Supabase.");
+    } finally {
+      setIsSyncing(false);
     }
-  }, []);
+  };
 
-  if (!session.role) return <Login onLogin={(r, id) => broadcastUpdate({ session: { role: r, guestId: id || null, lastTab: id ? 'portal' : 'master' } })} />;
+  const handleCreateShareLink = () => {
+    savePlanToSupabase(appState);
+  };
+
+  if (!session.role) return <Login onLogin={(r, id) => setSession({ role: r, guestId: id || null, lastTab: id ? 'portal' : 'master' })} />;
 
   const renderContent = () => {
     const currentGuest = deferredGuests.find((g: Guest) => g.id === session.guestId) || (session.role === 'planner' ? deferredGuests[0] : null);
-    
-    if (session.role === 'guest' && !currentGuest) return <Login onLogin={(r, id) => broadcastUpdate({ session: { role: r, guestId: id || null, lastTab: 'portal' } })} />;
+    if (session.role === 'guest' && !currentGuest) return <Login onLogin={(r, id) => setSession({ role: r, guestId: id || null, lastTab: 'portal' })} />;
 
     if (session.lastTab === 'portal') return (
       <GuestPortal 
@@ -240,9 +184,9 @@ const App: React.FC = () => {
         roomDatabase={rooms} 
         itinerary={itinerary} 
         isPlanner={isPlanner} 
-        onUpdateEventImage={handleUpdateEventImage} 
-        onUpdateRoomImage={handleUpdateRoomImage}
-        onBackToMaster={() => broadcastUpdate({ session: { ...session, guestId: null, lastTab: 'master' } })} 
+        onUpdateEventImage={(id, file) => handleCloudImageUpload('event', id, file)} 
+        onUpdateRoomImage={(no, prop, file) => handleCloudImageUpload('room', no, file, prop)}
+        onBackToMaster={() => setSession({ ...session, guestId: null, lastTab: 'master' })} 
       />
     );
     
@@ -251,35 +195,39 @@ const App: React.FC = () => {
         return (
           <div className="space-y-10">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-1">
-              <div><h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight tracking-tight">Master List</h2><p className="text-stone-500 italic mt-2 text-sm">Update a name here to sync across Rooms, Meals, and Invites.</p></div>
-              {isPlanner && (
-                <div className="flex flex-wrap gap-4">
-                  <button onClick={handleRescueButton} className="bg-amber-50 text-amber-700 px-6 py-5 rounded-full text-[10px] font-black uppercase tracking-widest border-2 border-amber-200 flex items-center gap-2 hover:bg-amber-100 transition-all"><LifeBuoy size={18} /> Rescue Data</button>
-                  <button onClick={() => broadcastUpdate(prev => ({ guests: [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Villa-Pool', roomNo: 'TBD', status: 'Pending', dietaryPreference: 'Veg', mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...prev.guests] }))} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl border-4 border-white hover:scale-105 transition-all"><UserPlus size={18} /> Add Guest</button>
+              <div>
+                <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master Database</h2>
+                <div className="flex items-center gap-3 mt-4">
+                  <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${planId ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-stone-900 text-[#D4AF37]'}`}>
+                    <Database size={12} /> {planId ? `Cloud Sync Active: ${planId.substring(0,8)}...` : 'Local Mode: Create Share Link to Sync'}
+                  </span>
+                  <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest italic">Update names here; they replicate instantly to all modules.</p>
                 </div>
-              )}
-            </div>
-            {storageUsage > 70 && (
-              <div className="bg-red-50 text-red-600 p-6 rounded-[2rem] border-2 border-red-200 flex items-center justify-between">
-                <div className="flex items-center gap-4"><ShieldAlert size={24} /><p className="font-black uppercase tracking-widest text-xs">Storage High ({storageUsage}%). Purge photos to keep names safe.</p></div>
-                <button onClick={purgePhotos} className="bg-red-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase">Purge Photos</button>
               </div>
-            )}
-            {showRescueSuccess && (
-              <div className="bg-green-600 text-white p-6 rounded-[2rem] flex items-center gap-4 shadow-xl animate-in slide-in-from-top-4"><CheckCircle size={24} /><p className="font-black uppercase tracking-widest text-xs">Data Restored Successfully.</p></div>
-            )}
+              <div className="flex gap-4">
+                {!planId && (
+                  <button onClick={handleCreateShareLink} className="bg-stone-900 text-white px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-xl flex items-center gap-3 hover:bg-black transition-all">
+                    <Share2 size={18} /> Create Share Link
+                  </button>
+                )}
+                {isPlanner && (
+                  <button onClick={() => broadcastUpdate({ guests: [{ id: `g-${Date.now()}`, name: 'New Guest', category: 'Friend', side: 'Common', property: 'Villa-Pool', roomNo: 'TBD', status: 'Pending', dietaryPreference: 'Veg', mealPlan: { lunch17: 'Veg', dinner17: 'Veg', lunch18: 'Veg', gala18: 'Veg' }, dressCode: '', dietaryNote: '', sangeetAct: '', pickupScheduled: false }, ...guests] })} className="bg-[#D4AF37] text-stone-900 px-10 py-5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl border-4 border-white hover:scale-105 transition-all"><UserPlus size={18} /> New Entry</button>
+                )}
+              </div>
+            </div>
             <DataTable guests={deferredGuests} onUpdate={handleUpdateGuest} columns={[{ key: 'name', label: 'FULL NAME', editable: isPlanner }, { key: 'side', label: 'SIDE', editable: isPlanner, type: 'select', options: ['Ladkewale', 'Ladkiwale', 'Common'] }, { key: 'property', label: 'STAY', editable: isPlanner, type: 'select', options: ['Villa-Pool', 'Villa-Hall', 'Resort', 'TreeHouse'] }, { key: 'roomNo', label: 'ROOM', editable: isPlanner }, { key: 'status', label: 'RSVP', editable: isPlanner, type: 'select', options: ['Confirmed', 'Pending', 'Declined'] }]} />
           </div>
         );
-      case 'rsvp-manager': return <RSVPManager guests={deferredGuests} onUpdate={handleUpdateGuest} role={session.role} onTeleport={(id) => broadcastUpdate({ session: { ...session, guestId: id, lastTab: 'portal' } })} />;
-      case 'venue': return <VenueOverview onUpdateRoomImage={handleUpdateRoomImage} rooms={rooms} isPlanner={isPlanner} />;
-      case 'rooms': return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={handleUpdateRoomImage} onAddRoom={(r) => broadcastUpdate(p => ({ rooms: [...p.rooms, r] }))} onUpdateRoom={(no, prop, updates) => broadcastUpdate(p => ({ rooms: p.rooms.map(r => r.roomNo === no && r.property === prop ? { ...r, ...updates } : r) }))} onDeleteRoom={(no, prop) => broadcastUpdate(p => ({ rooms: p.rooms.filter(r => !(r.roomNo === no && r.property === prop)) }))} isPlanner={isPlanner} />;
+      case 'rsvp-manager': return <RSVPManager guests={deferredGuests} onUpdate={handleUpdateGuest} role={session.role} onTeleport={(id) => setSession({ ...session, guestId: id, lastTab: 'portal' })} />;
+      case 'venue': return <VenueOverview onUpdateRoomImage={(no, prop, file) => handleCloudImageUpload('room', no, file, prop)} rooms={rooms} isPlanner={isPlanner} />;
+      case 'rooms': return <RoomMap guests={deferredGuests} rooms={rooms} onUpdateImage={(no, prop, file) => handleCloudImageUpload('room', no, file, prop)} onAddRoom={(r) => broadcastUpdate({ rooms: [...rooms, r] })} onUpdateRoom={(no, prop, updates) => broadcastUpdate({ rooms: rooms.map(r => r.roomNo === no && r.property === prop ? { ...r, ...updates } : r) })} onDeleteRoom={(no, prop) => broadcastUpdate({ rooms: rooms.filter(r => !(r.roomNo === no && r.property === prop)) })} isPlanner={isPlanner} />;
       case 'meals': return <MealPlan guests={deferredGuests} budget={budget} onUpdate={handleUpdateGuest} isPlanner={isPlanner} />;
       case 'tasks': return <TaskMatrix tasks={tasks} onUpdateTasks={(t) => broadcastUpdate({ tasks: t })} isPlanner={isPlanner} />;
       case 'tree': return <TreeView guests={deferredGuests} />;
-      case 'budget': return <BudgetTracker budget={budget} onUpdateBudget={(u) => broadcastUpdate(prev => ({ budget: { ...prev.budget, ...u } }))} guests={deferredGuests} isPlanner={isPlanner} onFinalizePath={(path) => broadcastUpdate(p => ({ tasks: path === 'Villa' ? [...p.tasks, ...VILLA_TASKS] : p.tasks, budget: { ...p.budget, selectedPath: path, committedSpend: path === 'Villa' ? 310000 : 485500 } }))} />;
+      case 'budget': return <BudgetTracker budget={budget} onUpdateBudget={(u) => broadcastUpdate({ budget: { ...budget, ...u } })} guests={deferredGuests} isPlanner={isPlanner} onFinalizePath={(path) => broadcastUpdate({ tasks: path === 'Villa' ? [...tasks, ...VILLA_TASKS] : tasks, budget: { ...budget, selectedPath: path, committedSpend: path === 'Villa' ? 310000 : 485500 } })} />;
       case 'ai': return <AIPlanner guests={deferredGuests} />;
       case 'inventory': return <InventoryManager guests={deferredGuests} inventory={budget.inventory || []} onUpdate={(inv) => broadcastUpdate({ budget: { ...budget, inventory: inv } })} isPlanner={isPlanner} />;
+      case 'deploy': return <DeploymentHub />;
       default: return null;
     }
   };
@@ -287,36 +235,32 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#FCFAF2] flex flex-col lg:flex-row">
       {session.role === 'planner' && (
-        <Sidebar activeTab={session.lastTab as AppTab} setActiveTab={(t) => broadcastUpdate({ session: { ...session, lastTab: t } })} role={session.role} onLogout={() => broadcastUpdate({ session: { role: null, guestId: null, lastTab: 'master' } })} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <Sidebar activeTab={session.lastTab as AppTab} setActiveTab={(t) => setSession({ ...session, lastTab: t })} role={session.role} onLogout={() => setSession({ role: null, guestId: null, lastTab: 'master' })} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       )}
       
       <main className={`flex-grow min-h-screen w-full transition-all ${session.role === 'planner' ? 'lg:ml-64' : ''}`}>
         {session.role === 'planner' && (
           <header className="flex items-center justify-between p-4 md:px-10 md:py-8 sticky top-0 bg-[#FCFAF2]/95 backdrop-blur-xl z-[100] border-b border-[#D4AF37]/10">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-[#B8860B]"><Menu size={24} /></button>
-            <div className="hidden md:block cursor-pointer" onClick={() => broadcastUpdate({ session: { ...session, lastTab: 'master', guestId: null } })}>
-              <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Sunehri Saalgira Online</p>
+            <div className="hidden md:block cursor-pointer" onClick={() => setSession({ ...session, lastTab: 'master', guestId: null })}>
+              <div className="flex items-center gap-3">
+                 <Wifi size={14} className={isSyncing ? "text-amber-500 animate-pulse" : "text-green-500"} />
+                 <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.4em]">Supabase Replicated Hub v2.5</p>
+              </div>
               <h1 className="text-xl font-serif font-bold text-stone-900">{EVENT_CONFIG.title}</h1>
             </div>
             <div className="flex items-center gap-3">
               {isSyncing ? (
-                <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-pulse">
+                <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-pulse shadow-xl border border-[#D4AF37]/30">
                   <RefreshCw size={16} className="animate-spin text-[#D4AF37]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Master Syncing...</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Saving Changes...</span>
                 </div>
               ) : (
-                <button 
-                  onClick={() => performSync(appState)}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-full border transition-all ${
-                    hasUnsavedChanges 
-                    ? 'bg-amber-50 border-amber-200 text-amber-600 shadow-lg scale-105' 
-                    : 'bg-white border-stone-100 text-stone-400 opacity-60 hover:opacity-100'
-                  }`}
-                >
+                <button onClick={() => savePlanToSupabase(appState)} className={`flex items-center gap-3 px-6 py-3 rounded-full border transition-all ${hasUnsavedChanges ? 'bg-amber-50 border-amber-200 text-amber-600 shadow-lg scale-105' : 'bg-white border-stone-100 text-stone-400 opacity-60 hover:opacity-100'}`}>
                   {hasUnsavedChanges ? <Save size={16} className="animate-bounce" /> : <CheckCircle size={16} className="text-green-500" />}
                   <div className="flex flex-col items-start text-left">
-                    <span className="text-[8px] font-black uppercase tracking-widest">{hasUnsavedChanges ? 'Draft Changes (Save)' : 'Database Safe'}</span>
-                    <span className="text-[7px] font-bold uppercase">Last: {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest">{hasUnsavedChanges ? 'Save to Cloud' : 'Cloud Synchronized'}</span>
+                    <span className="text-[7px] font-bold uppercase">Sync: {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </button>
               )}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Globe, 
@@ -11,16 +10,16 @@ import {
   Lock, 
   ShieldCheck,
   Smartphone,
-  MessageSquare
+  Database
 } from 'lucide-react';
 
 const DeploymentHub: React.FC = () => {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-32">
       <div className="px-1">
-        <h2 className="text-3xl md:text-6xl font-serif font-bold text-stone-900 leading-tight">The <span className="text-[#B8860B]">Go-Live</span> Suite</h2>
+        <h2 className="text-3xl md:text-6xl font-serif font-bold text-stone-900 leading-tight">The <span className="text-[#B8860B]">Cloud</span> Deployment</h2>
         <p className="text-stone-500 text-lg italic mt-4 max-w-2xl">
-          Instructions to move this from a preview to a real website that "Grandpa" and all your guests can access on their phones.
+          Move your master data from your computer to the Srivastava Cloud.
         </p>
       </div>
 
@@ -29,51 +28,30 @@ const DeploymentHub: React.FC = () => {
           <div className="w-16 h-16 bg-stone-900 text-[#D4AF37] rounded-3xl flex items-center justify-center shadow-2xl transition-transform group-hover:scale-110">
             <Github size={32} />
           </div>
-          <h3 className="text-2xl font-serif font-bold text-stone-900">Step 1: Gitshub</h3>
+          <h3 className="text-2xl font-serif font-bold text-stone-900">Step 1: Code</h3>
           <p className="text-stone-500 text-sm leading-relaxed">
-            Create a repository on GitHub. Take all the files in this directory and upload them to your new repo.
+            Upload these files to your GitHub repository. Vercel will auto-detect the changes and build the site.
           </p>
-          <ul className="space-y-3 pt-4">
-            {['Create GitHub Account', 'New Repository', 'Upload App Files'].map((item, i) => (
-              <li key={i} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-stone-400">
-                <CheckCircle size={14} className="text-green-500" /> {item}
-              </li>
-            ))}
-          </ul>
         </div>
 
         <div className="bg-white p-10 rounded-[3rem] border border-stone-100 shadow-xl space-y-6 relative overflow-hidden group">
           <div className="w-16 h-16 bg-[#0070f3] text-white rounded-3xl flex items-center justify-center shadow-2xl transition-transform group-hover:scale-110">
-            <Rocket size={32} />
+            <Database size={32} />
           </div>
-          <h3 className="text-2xl font-serif font-bold text-stone-900">Step 2: Vercel</h3>
+          <h3 className="text-2xl font-serif font-bold text-stone-900">Step 2: Supabase</h3>
           <p className="text-stone-500 text-sm leading-relaxed">
-            Connect your GitHub to Vercel.com. They will host your website for free and give you a real link like <code className="bg-stone-100 px-1 rounded">jubilee.vercel.app</code>.
+            Create a Supabase project. Create a bucket named <code className="bg-stone-100 px-1 rounded">images</code> and a table named <code className="bg-stone-100 px-1 rounded">plans</code>.
           </p>
-          <ul className="space-y-3 pt-4">
-            {['Link GitHub to Vercel', 'Import Jubilee Project', 'Set Domain Name'].map((item, i) => (
-              <li key={i} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-stone-400">
-                <CheckCircle size={14} className="text-[#0070f3]" /> {item}
-              </li>
-            ))}
-          </ul>
         </div>
 
         <div className="bg-stone-900 p-10 rounded-[3rem] shadow-2xl space-y-6 relative overflow-hidden group">
           <div className="w-16 h-16 bg-[#D4AF37] text-stone-900 rounded-3xl flex items-center justify-center shadow-2xl transition-transform group-hover:scale-110">
             <Key size={32} />
           </div>
-          <h3 className="text-2xl font-serif font-bold text-white">Step 3: AI Key</h3>
+          <h3 className="text-2xl font-serif font-bold text-white">Step 3: Secrets</h3>
           <p className="text-stone-400 text-sm leading-relaxed">
-            In Vercel Settings, add an Environment Variable named <code className="bg-white/10 px-1 rounded text-[#D4AF37]">API_KEY</code>. Paste your Gemini key there.
+            In Vercel, add: <code className="bg-white/10 px-1 rounded text-[#D4AF37]">VITE_SUPABASE_URL</code>, <code className="bg-white/10 px-1 rounded text-[#D4AF37]">VITE_SUPABASE_ANON_KEY</code>, and <code className="bg-white/10 px-1 rounded text-[#D4AF37]">API_KEY</code>.
           </p>
-          <ul className="space-y-3 pt-4">
-            {['Go to Project Settings', 'Add API_KEY variable', 'Deploy to Production'].map((item, i) => (
-              <li key={i} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-stone-500">
-                <Lock size={14} className="text-[#D4AF37]" /> {item}
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
 
@@ -84,42 +62,28 @@ const DeploymentHub: React.FC = () => {
           </div>
           <div className="flex-grow space-y-6 text-center lg:text-left">
             <h4 className="text-3xl md:text-4xl font-serif font-bold text-stone-900 leading-tight tracking-tight">
-              Why do this?
+              Ready for Goa?
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-[#B8860B] font-black text-[10px] uppercase tracking-widest">
-                  <Smartphone size={16} /> Real Mobile Access
+                  <Smartphone size={16} /> RSVP Mobile Sync
                 </div>
                 <p className="text-stone-600 text-sm leading-relaxed">
-                  Once deployed, the <strong>RSVP Links</strong> in your Manager will actually work on your guest's phones. They can fill their details from anywhere.
+                  Your guests will open the site, RSVP on their phones, and you'll see the <strong>Master List</strong> update in real-time.
                 </p>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-[#B8860B] font-black text-[10px] uppercase tracking-widest">
-                  <ShieldCheck size={16} /> Data Security
+                  <ShieldCheck size={16} /> Persistent Storage
                 </div>
                 <p className="text-stone-600 text-sm leading-relaxed">
-                  The names you set for <strong>Grandpa</strong> will be stored on a real database instead of just your local browser's memory.
+                  All names, room assignments, and meal plans are stored securely in Supabase. Refreshing the browser won't lose your work.
                 </p>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="p-10 bg-white rounded-[3rem] border border-stone-200 text-center space-y-6">
-        <AlertTriangle size={40} className="mx-auto text-amber-500" />
-        <h4 className="text-2xl font-serif font-bold text-stone-900">Final Verification</h4>
-        <p className="text-stone-500 text-sm max-w-xl mx-auto italic">
-          "Before you deploy, verify your Master List one last time. Ensure the Room Numbers and Meal Plans for your VIPs are exactly how you want them to appear on their phone screens."
-        </p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="inline-flex items-center gap-3 bg-stone-900 text-white px-10 py-5 rounded-full font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-xl"
-        >
-          Final Sync Check <ArrowRight size={16} />
-        </button>
       </div>
     </div>
   );
