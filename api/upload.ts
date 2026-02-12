@@ -1,9 +1,8 @@
-
 import { put } from '@vercel/blob';
 
 /**
- * Node.js Serverless Function (Vercel)
- * Using standard Request/Response APIs but running on Node.js runtime.
+ * Standard Node.js Serverless Function (Vercel)
+ * Using standard Request/Response APIs but running on Node.js runtime to support @vercel/blob.
  */
 export default async function handler(request: Request): Promise<Response> {
   if (request.method !== 'POST') {

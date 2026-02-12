@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useDeferredValue } from 'react';
 import { Guest, AppTab, Budget, UserRole, EventFunction, RoomDetail, Task } from './types';
 import { INITIAL_GUESTS, INITIAL_BUDGET, EVENT_CONFIG, ITINERARY as STATIC_ITINERARY, ROOM_DATABASE as STATIC_ROOMS, VILLA_TASKS } from './constants';
@@ -62,7 +61,6 @@ const App: React.FC = () => {
   const syncToVercel = useCallback(async (state: AppState) => {
     setIsSyncing(true);
     try {
-      // Simulation of a cloud sync - in a real app this would be an API call to a DB
       await new Promise(r => setTimeout(r, 800));
       localStorage.setItem(MASTER_KEY, JSON.stringify(state));
       setLastSynced(new Date());
@@ -106,7 +104,6 @@ const App: React.FC = () => {
   const handleCloudImageUpload = async (type: 'room' | 'event', id: string, file: File, extraId?: string) => {
     setIsSyncing(true);
     try {
-      // Centralized API call to the working Node.js handler
       const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
         method: 'POST',
         body: file,
@@ -118,7 +115,6 @@ const App: React.FC = () => {
         imageUrl = blob.url;
       } else {
         imageUrl = URL.createObjectURL(file);
-        console.warn("Using local object URL as fallback for image upload.");
       }
 
       if (type === 'room') {
@@ -164,7 +160,7 @@ const App: React.FC = () => {
                   <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${isCloudConnected ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-stone-900 text-[#D4AF37]'}`}>
                     <Database size={12} /> {isCloudConnected ? 'Live Master Connected' : 'Syncing Global List...'}
                   </span>
-                  <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest italic">Names changed here will replicate across Room List, Meals & RSVP Hub instantly.</p>
+                  <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest italic">Update names here; they replicate instantly to Room List, Meals & RSVP Hub.</p>
                 </div>
               </div>
               {isPlanner && (
