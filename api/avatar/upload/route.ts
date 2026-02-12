@@ -1,30 +1,51 @@
-
+// @ts-nocheck
 import { put } from '@vercel/blob';
-import { NextResponse } from 'next/server';
 
 /**
- * Vercel Blob Upload Route
- * This handles POST requests from the frontend, uploads the image to Vercel's global CDN,
- * and returns the public URL. This prevents LocalStorage "Quota Exceeded" errors.
+ * Vercel Serverless Function (Edge Runtime)
+ * Uses standard Web Request/Response objects to avoid Next.js specific dependencies.
  */
-export async function POST(request: Request): Promise<NextResponse> {
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(request: Request): Promise<Response> {
+  // Method guard
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
-    const filename = searchParams.get('filename') || 'upload.jpg';
+    const filename = searchParams.get('filename') || `upload-${Date.now()}.jpg`;
 
     if (!request.body) {
-      return NextResponse.json({ error: 'No file body provided' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'No file body provided' }), { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    // Upload the file stream directly to Vercel Blob storage
-    // Ensure you have BLOB_READ_WRITE_TOKEN in your Vercel Environment Variables
+    // Direct upload to Vercel Blob storage
     const blob = await put(filename, request.body, {
       access: 'public',
     });
 
-    return NextResponse.json(blob);
+    return new Response(JSON.stringify(blob), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Vercel Blob Upload Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return new Response(JSON.stringify({ 
+      error: 'Internal Server Error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }

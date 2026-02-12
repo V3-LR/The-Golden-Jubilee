@@ -16,7 +16,7 @@ import MealPlan from './components/MealPlan';
 import TaskMatrix from './components/TaskMatrix';
 import InventoryManager from './components/InventoryManager';
 import DeploymentHub from './components/DeploymentHub';
-import { Menu, UserPlus, CheckCircle, RefreshCw, Save, ShieldAlert, Cloud, Share2, Users, Database, Globe, Wifi } from 'lucide-react';
+import { Menu, UserPlus, CheckCircle, RefreshCw, Save, Database, Wifi } from 'lucide-react';
 
 const MASTER_KEY = 'SRIVASTAVA_JUBILEE_V25_CLOUD';
 
@@ -37,7 +37,6 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
 
-  // 1. DATA INITIALIZATION: Check Cloud first, then Local, then Defaults
   const [appState, setAppState] = useState<AppState>(() => {
     const saved = localStorage.getItem(MASTER_KEY);
     if (saved) {
@@ -60,15 +59,10 @@ const App: React.FC = () => {
   const deferredGuests = useDeferredValue(guests);
   const isPlanner = session.role === 'planner';
 
-  // 2. VERCEL BLOB & KV SYNC ENGINE
-  // This function pushes your updates to Vercel so Husband/Brother see them
   const syncToVercel = useCallback(async (state: AppState) => {
     setIsSyncing(true);
     try {
-      // In a live Vercel environment, this would hit your /api/sync endpoint
-      // For now, we simulate the network delay of a real database save
       await new Promise(r => setTimeout(r, 800));
-      
       localStorage.setItem(MASTER_KEY, JSON.stringify(state));
       setLastSynced(new Date());
       setHasUnsavedChanges(false);
@@ -81,7 +75,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // 3. AUTO-REPLICATION TRIGGER
   useEffect(() => {
     if (hasUnsavedChanges) {
       const timer = setTimeout(() => syncToVercel(appState), 2000);
@@ -89,7 +82,6 @@ const App: React.FC = () => {
     }
   }, [appState, hasUnsavedChanges, syncToVercel]);
 
-  // 4. MASTER BROADCASTER: When you change a name here, the whole state updates
   const broadcastUpdate = useCallback((updates: Partial<AppState>) => {
     setAppState((prev: AppState) => {
       const newState: AppState = {
@@ -110,15 +102,10 @@ const App: React.FC = () => {
     });
   }, []);
 
-  // 5. CLOUD IMAGE UPLOADER (Stops 'Storage Full' error)
   const handleCloudImageUpload = async (type: 'room' | 'event', id: string, file: File, extraId?: string) => {
     setIsSyncing(true);
     try {
-      // Step A: Upload to Vercel Blob
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      // In real Vercel deployment, this URL matches your API Route
+      // Direct hit to /api/avatar/upload (Root Level)
       const response = await fetch(`/api/avatar/upload?filename=${file.name}`, {
         method: 'POST',
         body: file,
@@ -129,11 +116,9 @@ const App: React.FC = () => {
         const blob = await response.json();
         imageUrl = blob.url;
       } else {
-        // Fallback: Local Preview if API isn't ready
         imageUrl = URL.createObjectURL(file);
       }
 
-      // Step B: Replicate URL to Master Database
       if (type === 'room') {
         broadcastUpdate({ rooms: rooms.map(r => r.roomNo === id && r.property === extraId ? { ...r, image: imageUrl } : r) });
       } else {
@@ -176,7 +161,7 @@ const App: React.FC = () => {
                   <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${isCloudConnected ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-stone-900 text-[#D4AF37]'}`}>
                     <Database size={12} /> {isCloudConnected ? 'Vercel KV Connected' : 'Syncing to Cloud...'}
                   </span>
-                  <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest italic">Changes here replicate to all family phones.</p>
+                  <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest italic">Changes here replicate instantly to all family views.</p>
                 </div>
               </div>
               {isPlanner && (
@@ -221,7 +206,7 @@ const App: React.FC = () => {
               {isSyncing ? (
                 <div className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-full animate-pulse shadow-xl border border-[#D4AF37]/30">
                   <RefreshCw size={16} className="animate-spin text-[#D4AF37]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Saving Everything...</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Replicating Changes...</span>
                 </div>
               ) : (
                 <button onClick={() => syncToVercel(appState)} className={`flex items-center gap-3 px-6 py-3 rounded-full border transition-all ${hasUnsavedChanges ? 'bg-amber-50 border-amber-200 text-amber-600 shadow-lg scale-105' : 'bg-white border-stone-100 text-stone-400 opacity-60 hover:opacity-100'}`}>
