@@ -2,8 +2,8 @@
 import { put } from '@vercel/blob';
 
 /**
- * Standard Vercel Serverless Function
- * This format is compatible with Vite/Frontend-only projects on Vercel.
+ * Node.js Serverless Function (Vercel)
+ * Using standard Request/Response APIs but running on Node.js runtime.
  */
 export default async function handler(request: Request): Promise<Response> {
   if (request.method !== 'POST') {
@@ -24,19 +24,19 @@ export default async function handler(request: Request): Promise<Response> {
       });
     }
 
-    // Upload to Vercel Blob
+    // Upload to Vercel Blob using the Node.js compatible library
+    // The BLOB_READ_WRITE_TOKEN environment variable must be set in Vercel
     const blob = await put(filename, request.body, {
       access: 'public',
-      token: process.env.BLOB_READ_WRITE_TOKEN
     });
 
     return new Response(JSON.stringify(blob), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload Error:', error);
-    return new Response(JSON.stringify({ error: 'Upload failed' }), { 
+    return new Response(JSON.stringify({ error: 'Upload failed', details: error.message }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

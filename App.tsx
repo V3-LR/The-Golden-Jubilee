@@ -62,6 +62,7 @@ const App: React.FC = () => {
   const syncToVercel = useCallback(async (state: AppState) => {
     setIsSyncing(true);
     try {
+      // Simulation of a cloud sync - in a real app this would be an API call to a DB
       await new Promise(r => setTimeout(r, 800));
       localStorage.setItem(MASTER_KEY, JSON.stringify(state));
       setLastSynced(new Date());
@@ -105,7 +106,7 @@ const App: React.FC = () => {
   const handleCloudImageUpload = async (type: 'room' | 'event', id: string, file: File, extraId?: string) => {
     setIsSyncing(true);
     try {
-      // Direct hit to the new standard /api/upload endpoint
+      // Centralized API call to the working Node.js handler
       const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
         method: 'POST',
         body: file,
@@ -117,6 +118,7 @@ const App: React.FC = () => {
         imageUrl = blob.url;
       } else {
         imageUrl = URL.createObjectURL(file);
+        console.warn("Using local object URL as fallback for image upload.");
       }
 
       if (type === 'room') {
@@ -125,7 +127,8 @@ const App: React.FC = () => {
         broadcastUpdate({ itinerary: itinerary.map(e => e.id === id ? { ...e, image: imageUrl } : e) });
       }
     } catch (e) {
-      alert("Cloud Upload Failed. Image saved locally for now.");
+      console.error("Upload failed", e);
+      alert("Cloud Upload Failed. Image saved locally for current session.");
     } finally {
       setIsSyncing(false);
     }
@@ -159,9 +162,9 @@ const App: React.FC = () => {
                 <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 leading-tight">Master Database</h2>
                 <div className="flex items-center gap-3 mt-4">
                   <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${isCloudConnected ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-stone-900 text-[#D4AF37]'}`}>
-                    <Database size={12} /> {isCloudConnected ? 'Vercel Blob Active' : 'Syncing to Cloud...'}
+                    <Database size={12} /> {isCloudConnected ? 'Live Master Connected' : 'Syncing Global List...'}
                   </span>
-                  <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest italic">Names update instantly across Room List, Meal Plan & RSVP Hub.</p>
+                  <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest italic">Names changed here will replicate across Room List, Meals & RSVP Hub instantly.</p>
                 </div>
               </div>
               {isPlanner && (
