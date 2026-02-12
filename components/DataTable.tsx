@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Guest } from '../types';
-import { Edit3, Lock } from 'lucide-react';
+import { Edit3, Lock, CheckCircle } from 'lucide-react';
 
 interface DataTableProps {
   guests: Guest[];
@@ -15,7 +16,6 @@ interface DataTableProps {
   }[];
 }
 
-// Sub-component to manage local typing state to prevent global re-renders
 const EditableCell: React.FC<{
   value: string;
   onCommit: (val: string) => void;
@@ -25,7 +25,6 @@ const EditableCell: React.FC<{
 }> = ({ value, onCommit, isEditing, onFocus, onBlur }) => {
   const [localValue, setLocalValue] = useState(value);
 
-  // Sync local value when external value changes (but only if not currently editing)
   useEffect(() => {
     if (!isEditing) {
       setLocalValue(value);
@@ -40,20 +39,27 @@ const EditableCell: React.FC<{
   };
 
   return (
-    <input
-      type="text"
-      className={`bg-white border-2 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/10 w-full transition-all font-bold text-stone-900 shadow-sm ${
-        isEditing ? 'border-[#D4AF37]' : 'border-stone-100'
-      }`}
-      value={localValue}
-      onFocus={onFocus}
-      onBlur={() => {
-        onBlur();
-        if (localValue !== value) onCommit(localValue);
-      }}
-      onChange={(e) => setLocalValue(e.target.value)}
-      onKeyDown={handleKeyDown}
-    />
+    <div className="relative group/cell">
+      <input
+        type="text"
+        className={`bg-white border-2 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/10 w-full transition-all font-black text-stone-900 shadow-sm ${
+          isEditing ? 'border-[#D4AF37] z-20 scale-105' : 'border-stone-100 group-hover/cell:border-[#D4AF37]/30'
+        }`}
+        value={localValue}
+        onFocus={onFocus}
+        onBlur={() => {
+          onBlur();
+          if (localValue !== value) onCommit(localValue);
+        }}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+      />
+      {!isEditing && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/cell:opacity-40 pointer-events-none transition-opacity">
+          <Edit3 size={12} />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -72,19 +78,15 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
     return 'bg-amber-100 text-amber-700 border-amber-200';
   };
 
-  const getStatusLabel = (status: string) => {
-    return status === 'Confirmed' ? 'Coming' : status;
-  };
-
   return (
     <div className="space-y-4 animate-in fade-in duration-700">
       <div className="bg-white rounded-[2rem] border border-[#D4AF37]/20 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] overflow-hidden">
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead className="bg-[#FCFAF2] text-stone-500 text-[10px] uppercase tracking-[0.25em] font-black">
+            <thead className="bg-[#FCFAF2] text-stone-500 text-[10px] uppercase tracking-[0.25em] font-black border-b border-[#D4AF37]/10">
               <tr>
                 {columns.map((col) => (
-                  <th key={col.key.toString()} className="px-8 py-6 border-b border-[#D4AF37]/10 first:pl-10 last:pr-10">
+                  <th key={col.key.toString()} className="px-8 py-6 first:pl-10 last:pr-10">
                     {col.label}
                   </th>
                 ))}
@@ -118,15 +120,13 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2">
-                              <EditableCell
-                                value={String(guest[col.key as keyof Guest] || '')}
-                                onCommit={(val) => onUpdate(guest.id, { [col.key]: val })}
-                                isEditing={editingId === `${guest.id}-${col.key}`}
-                                onFocus={() => setEditingId(`${guest.id}-${col.key}`)}
-                                onBlur={() => setEditingId(null)}
-                              />
-                            </div>
+                            <EditableCell
+                              value={String(guest[col.key as keyof Guest] || '')}
+                              onCommit={(val) => onUpdate(guest.id, { [col.key]: val })}
+                              isEditing={editingId === `${guest.id}-${col.key}`}
+                              onFocus={() => setEditingId(`${guest.id}-${col.key}`)}
+                              onBlur={() => setEditingId(null)}
+                            />
                           )}
                         </div>
                       ) : (
@@ -135,7 +135,7 @@ const DataTable: React.FC<DataTableProps> = ({ guests, onUpdate, columns }) => {
                             col.key === 'status' ? getStatusColor(String(guest.status)) : 
                             col.key === 'side' ? getSideColor(String(guest.side)) : 'text-stone-900 border-stone-50 bg-stone-50'
                           }`}>
-                            {col.key === 'status' ? getStatusLabel(String(guest[col.key as keyof Guest] || '-')) : String(guest[col.key as keyof Guest] || '-')}
+                            {String(guest[col.key as keyof Guest] || '-')}
                           </span>
                         </div>
                       )}

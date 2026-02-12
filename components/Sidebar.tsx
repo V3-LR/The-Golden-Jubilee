@@ -1,23 +1,23 @@
+
 import React from 'react';
 import { 
   Users, 
   Bed, 
   Utensils, 
-  Music, 
   GitBranch, 
   IndianRupee, 
   Sparkles,
   Map,
   X,
   Share2,
-  Trees,
   Lock,
   MailCheck,
   LayoutDashboard,
   LogOut,
   ListTodo,
   Heart,
-  Package
+  Package,
+  Rocket
 } from 'lucide-react';
 import { AppTab, UserRole } from '../types';
 import { EVENT_CONFIG } from '../constants';
@@ -45,6 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
     { id: 'tree', label: 'Interactive Tree', icon: GitBranch, plannerOnly: false },
     { id: 'budget', label: 'Budget Tracker', icon: IndianRupee, plannerOnly: true },
     { id: 'ai', label: 'AI Assistant', icon: Sparkles, plannerOnly: true },
+    { id: 'deploy', label: 'Go-Live Suite', icon: Rocket, plannerOnly: true },
     { id: 'portal', label: 'View Invitation', icon: LayoutDashboard, plannerOnly: false },
   ];
 
